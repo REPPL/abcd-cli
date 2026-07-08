@@ -50,8 +50,13 @@ mere incidental reading), append ONE line to
 `~/.abcd/sources/ledger/<repo>.jsonl`:
 
 ```json
-{"ts":"<UTC ISO-8601>","repo":"<repo>","decision_ref":"<DECISIONS.md date | ADR id | intent id | free text>","claim":"<what was decided/claimed>","source_key":"<CSL id>","locator":"<pp./§ if known>","influence":"supports|contradicts|method|background","cited_publicly":false}
+{"ts":"<UTC ISO-8601>","repo":"<repo>","decision_ref":"<DECISIONS.md date | ADR id | intent id | free text>","claim":"<what was decided/claimed>","source_key":"<CSL id>","locator":"<pp./§ if known>","influence":"supports|contradicts|method|background","used_in":["<repo-relative path(s) of the consuming document(s)>"],"cited_publicly":false}
 ```
+
+`used_in` makes acknowledgment machine-readable in both directions: an idea
+is traced to its source even when the consuming document only paraphrases
+(public sources) or must stay silent (confidential sources). Fill it whenever
+the influence landed in an identifiable document, not just a conversation.
 
 Then commit in the corpus repo:
 `git -C ~/.abcd/sources add -A && git -C ~/.abcd/sources commit -m "ledger(<repo>): <source_key> → <short decision>"`
