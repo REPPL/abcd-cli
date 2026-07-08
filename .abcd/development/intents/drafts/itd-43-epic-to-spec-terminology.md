@@ -16,7 +16,7 @@ severity: minor
 
 > **abcd speaks one word for a specced block of work — `spec` — everywhere a product thinker or contributor reads: no `epic` left behind in a heading, a review type, a schema field, or the glossary.** The native spec store is `spec` throughout, and abcd's `spec_id` intent-frontmatter field already carries the concept. Where abcd's *surfaces* still say `"epic"` — the reviews subsystem (`epic-review` type, `## Epic:` headings, `epic_id` review-directory identifiers), and prose across the brief, docs, command help, and the canonical `terminology/core/epic.md` term file — this intent makes the vocabulary single. Every one of those surfaces is abcd-owned; there is no vendored external epic/spec boundary to preserve, so the rename runs clean through the reviews subsystem, the schemas, and the glossary.
 >
-> "I'd renamed the field and thought I was done — then a contributor opened `terminology/core/epic.md` and asked which word was real," said Alice, framework author. "abcd's whole pitch is that each concept has one canonical term. Having `spec` in the schema and `epic` in the glossary was exactly the drift the glossary exists to prevent. One sweep, one word, and the term file is the source of truth again."
+> "I'd renamed the field and thought I was done — then a contributor opened `terminology/core/epic.md` and asked which word was real," said Kira, framework author. "abcd's whole pitch is that each concept has one canonical term. Having `spec` in the schema and `epic` in the glossary was exactly the drift the glossary exists to prevent. One sweep, one word, and the term file is the source of truth again."
 
 ## Status
 

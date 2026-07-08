@@ -28,6 +28,21 @@ parallel-agent merge contention bites.
   chosen for eventual paper reconstruction; RAG rejected at this scale.
 - 2026-07-08 — Personas in any scenario are always Alice, Bob, Carol (in that
   order); the user is they/them. Recorded as a principle.
+- 2026-07-08 — Persona SSOTs reconciled: `personas.json` is the single registry
+  (13, expandable, alphabetical sequence); selection is BY ROLE, the role's
+  registered name is used, never a name picked directly; all personas and the
+  real user are they/them. Principle file updated to point at the registry;
+  registry-membership lint is the intended gate.
+- 2026-07-08 — Intents gain a required `## Prior Art` section (positions the
+  intent against corpus + outside work; ≥1 resolvable reference or an explicit
+  "none found — searched X"). Coherence stays at promotion (itd-42), whose
+  Tier 2 now also loads `principles/`; capture stays severity + edges.
+- 2026-07-08 — Edges stay one-way (dependent-authored), reverse views derived
+  only; itd-78 lint rejects hand-authored reverse fields; edges gain optional
+  content fingerprints (`itd-N@hash`) so a target's change marks inbound edges
+  suspect. Intent doneness = spec closed AND the intent's own itd-1 criteria
+  MET (never inferred from spec close) — full consume-vocabulary decision
+  deferred to a follow-up interview.
 - 2026-07-08 — itd-76 grilled: leak guard promises literal strings only
   (paraphrase risk stated, handled behaviourally + review); citation is a
   two-level AND (source permission_status AND per-line cited_publicly); author

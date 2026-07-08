@@ -194,6 +194,12 @@ prd_grandfathered: null  # true = pre-spc-3 planned intent; GR002+GL005 suppress
 
 - **Given** <preconditions>, **when** <user/system action>, **then** <observable outcome>.
 
+## Prior Art
+
+> _Required. Positions the intent against the existing corpus: what it builds on, what almost covers it, why it is nonetheless its own intent. At least one resolvable reference (sibling intent, brief section, principle, ADR, or external source); "none found — searched <where>" is a valid entry, an empty section is not._
+
+- <Reference + one line on the relation>
+
 ## Open Questions
 
 - <Bullet — anything not yet decided>
@@ -223,9 +229,9 @@ The freeze is **non-self-referential**: re-computing the hash on the frozen PRD 
 
 ## Customer Quotes — Persona Convention
 
-Customer quotes use placeholder personas from `.abcd/development/personas.json` (Alice, Bob, Carol, ...). Each persona has role hints; pick a persona whose role matches the intent's audience.
+Customer quotes use placeholder personas from `.abcd/development/personas.json` (Alice, Bob, Carol, ... — a fixed alphabetical sequence). Selection is **by role, never by name**: the intent's audience picks the role; the role's registered name is used. Every persona is they/them.
 
-This is also a codified abcd principle: never use real names in press releases (PII), but never use generic "a hypothetical user" language (loses voice). Named personas keep quotes grounded without leaking real-world identifiers.
+This is also a codified abcd principle ([`principles/personas-alice-bob-carol.md`](../principles/personas-alice-bob-carol.md)): never use real names in press releases (PII), but never use generic "a hypothetical user" language (loses voice). Named personas keep quotes grounded without leaking real-world identifiers.
 
 ---
 
