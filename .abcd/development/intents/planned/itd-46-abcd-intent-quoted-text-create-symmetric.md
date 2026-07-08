@@ -7,6 +7,7 @@ suggested_kind: standalone
 reclassification_history: []
 related_adrs: []
 builds_on: [itd-4]
+severity: minor
 ---
 
 # `/abcd:intent "<text>"` And `/abcd:capture "<text>"` Become Symmetric Create Paths

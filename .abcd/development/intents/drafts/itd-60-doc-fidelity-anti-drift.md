@@ -15,6 +15,7 @@ glossary_terms_used:
 - core/oracle
 grilled_intent_hash: bfaa672163edddb5d859bbdfc50169512349da38405c295729ce42c04b894401
 prd_grandfathered: false
+severity: major
 ---
 
 # When Something Is Built, The Brief And The Public Docs Reflect It — Or The Spec Cannot Close

@@ -7,6 +7,7 @@ suggested_kind: null
 reclassification_history: []
 related_adrs: [adr-8, adr-25]
 builds_on: [itd-5]
+severity: minor
 ---
 
 # Pick the Right Oracle for the Job, Automatically

@@ -19,6 +19,7 @@ glossary_terms_used:
   - core/spec
   - core/transport
 builds_on: [itd-1]
+severity: major
 ---
 
 # Spec-Tied Reviews Live Next To The Spec They Reviewed

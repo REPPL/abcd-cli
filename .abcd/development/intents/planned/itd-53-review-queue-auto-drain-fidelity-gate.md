@@ -8,6 +8,7 @@ reclassification_history: []
 related_adrs: [adr-16]
 routed_from: ["spc-33:I-D2"]
 prd_path: null
+severity: major
 ---
 
 # A Shipped Intent No Longer Drifts Out Of Audit Just Because Nobody Ran The Review

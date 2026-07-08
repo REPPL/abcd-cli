@@ -6,6 +6,7 @@ kind: standalone
 suggested_kind: null
 reclassification_history: []
 builds_on: [itd-18, itd-1]
+severity: minor
 ---
 
 # Start a New Project With abcd Conventions

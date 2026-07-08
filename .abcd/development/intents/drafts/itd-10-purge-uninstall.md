@@ -6,6 +6,7 @@ kind: standalone
 suggested_kind: null
 reclassification_history: []
 builds_on: [itd-13]
+severity: minor
 ---
 
 # Full Removal When You Mean It

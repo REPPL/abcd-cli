@@ -13,6 +13,8 @@ grandfathered_at_phase: phase-6-launch
 glossary_terms_used:
   - core/brief
   - distribution/version
+severity: minor
+builds_on: [itd-67]
 ---
 
 # Plugin Metadata Stays Consistent Across Every Duplicated Surface

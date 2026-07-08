@@ -7,6 +7,7 @@ suggested_kind: standalone
 reclassification_history: []
 related_adrs: []
 prd_path: null
+severity: minor
 ---
 
 # abcd Can Tell Whether Its Own Reasoning Rests On Bedrock Or On An Unexamined Assumption

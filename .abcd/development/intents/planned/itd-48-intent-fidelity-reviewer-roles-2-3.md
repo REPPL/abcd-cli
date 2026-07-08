@@ -9,6 +9,7 @@ reclassification_history:
 related_adrs: []
 routed_from: ["spc-33:A1", "spc-33:A2", "spc-33:A3", "spc-33:A4", "spc-33:G1"]
 builds_on: [itd-34, itd-5]
+severity: major
 ---
 
 # `intent-fidelity-reviewer` Gains Its Cross-Doc And Kind-Classification Roles

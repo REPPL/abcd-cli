@@ -6,6 +6,7 @@ kind: standalone
 suggested_kind: standalone
 reclassification_history: []
 related_adrs: [adr-10]
+severity: minor
 ---
 
 # abcd Tells You, Honestly, What a Phasing Choice Costs

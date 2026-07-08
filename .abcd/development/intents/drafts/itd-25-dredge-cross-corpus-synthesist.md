@@ -7,6 +7,7 @@ suggested_kind: null
 reclassification_history: []
 blocked_by: [itd-4]
 builds_on: [itd-13, itd-36]
+severity: minor
 ---
 
 # Patterns Surface Themselves

@@ -7,6 +7,8 @@ suggested_kind: standalone
 reclassification_history: []
 related_adrs: []
 blocked_by: [itd-34]
+severity: minor
+builds_on: [itd-39]
 ---
 
 # A Capture-Time `decision` Verdict That Routes Infrastructure Choices Into The Existing ADR Store

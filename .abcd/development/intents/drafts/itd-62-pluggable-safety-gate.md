@@ -15,6 +15,7 @@ glossary_terms_used:
 grilled_intent_hash: 07b637b032a89ea870fbf6d78d9f6dc88d0ec1a40e124811d6ac4e3d62c7ae2d
 prd_grandfathered: false
 builds_on: [itd-60, itd-61]
+severity: major
 ---
 
 # abcd Routes The Invisible Risks An Amateur Cannot See To A Real, Fail-Closed Gate That Wraps A Trusted Scanner

@@ -24,6 +24,7 @@ glossary_terms_used:
   - core/voyage
   - interview/session
 builds_on: [itd-1]
+severity: major
 ---
 
 # Domain Experts Get Their Intents Grilled Before Anyone Codes Them

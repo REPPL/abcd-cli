@@ -11,6 +11,7 @@ glossary_terms_used: [core/intent, core/spec, core/phase, core/oracle, core/life
 grilled_at: 2026-06-02
 blocked_by: [itd-53]
 builds_on: [itd-44, itd-43]
+severity: major
 ---
 
 # The Audit Loop Drives An Intent To Acceptance — Or Calls For A Replan

@@ -5,6 +5,7 @@ spec_id: null
 kind: standalone
 suggested_kind: null
 reclassification_history: []
+severity: minor
 ---
 
 # Lifeboats Carry RepoPrompt Workspace Definitions Forward
@@ -13,7 +14,7 @@ reclassification_history: []
 
 > **When the RepoPrompt adapter is configured, abcd packs the RP workspace definition into the lifeboat.** When `dev-sync` runs (and as part of `/abcd:disembark`), abcd reads the project's RepoPrompt workspace definition from `~/Library/Application Support/RepoPrompt/Workspaces/` and writes it into `.abcd/rp/workspace.json` in the repo. On `/abcd:embark`, the workspace is read back and offered for registration with RepoPrompt on the new machine. For personas who drive RepoPrompt, migrating to a fresh user account no longer means rebuilding workspace boundaries by hand for every active project.
 >
-> "I switched user accounts and dreaded rebuilding RP workspaces for a dozen active projects from memory," said Frank, DevOps engineer. "abcd's workspace pull meant each project's `.abcd/rp/workspace.json` came along with the lifeboat. Embark on the new account asked whether to register each one. Thirty seconds per project instead of half an hour."
+> "I switched user accounts and dreaded rebuilding RP workspaces for a dozen active projects from memory," said Alice, DevOps engineer. "abcd's workspace pull meant each project's `.abcd/rp/workspace.json` came along with the lifeboat. Embark on the new account asked whether to register each one. Thirty seconds per project instead of half an hour."
 
 ## Why This Matters
 

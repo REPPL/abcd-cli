@@ -6,6 +6,7 @@ kind: standalone
 suggested_kind: null
 reclassification_history: []
 blocked_by: [itd-2]
+severity: major
 ---
 
 # abcd Runs in OpenCode Too

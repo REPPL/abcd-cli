@@ -7,6 +7,7 @@ bundle: null
 spec_id: null
 reclassification_history: []
 builds_on: [itd-1]
+severity: major
 ---
 
 # Intents Promote In Three Flavours — Standalone, Bundle-Member, Discipline

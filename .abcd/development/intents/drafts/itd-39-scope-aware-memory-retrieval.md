@@ -6,6 +6,7 @@ kind: standalone
 suggested_kind: standalone
 reclassification_history: []
 blocked_by: [itd-36, itd-3]
+severity: minor
 ---
 
 # abcd Surfaces the Right Memory at the Right Moment

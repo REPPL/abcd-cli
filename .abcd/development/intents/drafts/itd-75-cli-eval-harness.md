@@ -5,6 +5,7 @@ spec_id: null
 kind: standalone
 suggested_kind: null
 reclassification_history: []
+severity: minor
 ---
 
 # abcd Proves Your CLI Actually Runs — From Fixtures You Drop In

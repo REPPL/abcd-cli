@@ -23,6 +23,7 @@ warrants_assumed:
 - "The public org handle is a known allowlistable constant distinct from the maintainer's personal git identity."
 blocked_by: [itd-66]
 builds_on: [itd-67]
+severity: critical
 ---
 
 # abcd Refuses To Publish A Payload Until The Full Ship-Time Pre-Flight Gate Suite Passes, Not Just The Secret Scan

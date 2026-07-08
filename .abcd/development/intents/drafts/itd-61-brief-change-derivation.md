@@ -14,6 +14,7 @@ glossary_terms_used:
 grilled_intent_hash: 11a0d2ede357a7c853ae7703b194b54431167e3d634b52426e09ed0db8088e9c
 prd_grandfathered: false
 builds_on: [itd-60]
+severity: minor
 ---
 
 # A Human Edit To The Brief Cannot Commit Until Its Implied Intents And Principles Are Drawn Out And Reconciled
