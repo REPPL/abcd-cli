@@ -5,6 +5,9 @@ spec_id: null
 kind: standalone
 suggested_kind: null
 reclassification_history: []
+severity: major
+blocked_by: [itd-74]
+builds_on: [itd-77]
 ---
 
 # abcd Lets You Consult Sources You Cannot Cite — and Remembers Every Debt

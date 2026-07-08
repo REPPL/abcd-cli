@@ -5,6 +5,9 @@ spec_id: null
 kind: standalone
 suggested_kind: null
 reclassification_history: []
+severity: minor
+blocked_by: []
+builds_on: []
 ---
 
 # abcd's User-Level Home Lives Where You Want It
