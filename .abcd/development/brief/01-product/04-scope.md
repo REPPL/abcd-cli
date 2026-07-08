@@ -30,9 +30,9 @@ itd-37 modification grammar) — disciplines have no user moment; they impose
 acceptance gates on every other spec per the three-kinds taxonomy in
 [`01-product/03-mental-model.md`](03-mental-model.md) and itd-34.
 
-See [`phases/README.md`](../../roadmap/phases/README.md) for the phase plan and each phase's intent scope, and [`intents/README.md`](../../intents/README.md) for the intent index. itd-27 (`/abcd:intent grill` sub-verb), itd-28 (spec-tied RP reviews), and itd-34 (three intent kinds) were captured post-brief on 2026-05-07. itd-36 (memory unification) and itd-37 (modification grammar) were captured on 2026-05-08 following adversarial RP review of four candidate ideas (LLM Wiki, Naur theory-building, systems thinking, jagged frontier); itd-40 (folder classification) was captured 2026-05-16.
+See [`phases/README.md`](../../roadmap/phases/README.md) for the phase plan and each phase's intent scope, and [`intents/README.md`](../../intents/README.md) for the intent index. Capture history lives in `git log` and each intent file's own provenance, never in this page (per [adr-5](../../decisions/adrs/0005-brief-is-current-state.md)).
 
-**Plumbing infrastructure** (15 agents, 11 adapters, harness shim, prompt-quality stack, hooks): see [`05-internals/`](../05-internals).
+**Plumbing infrastructure** (16 agents — the canonical roster is the catalog in [`05-internals/01-agents.md`](../05-internals/01-agents.md) — 11 adapters, harness shim, prompt-quality stack, hooks): see [`05-internals/`](../05-internals).
 
 ## What comes in a later phase
 

@@ -45,7 +45,7 @@ in the historical note at the end of this section, not here.)
 - itd-41 — Phase negotiator — Socratic phase-proposer (per [adr-10](../../decisions/adrs/0010-phase-negotiator-grounded-tradeoffs.md))
 - itd-44 — A fourth intent kind for infrastructure choices the product thinker wants to record
 - `.work/issues.md` cleanup bundle (sweep the workshop before a later phase)
-- itd-47 — oracle-backed gates pass honestly without a human in the loop (not yet shipped)
+- itd-47 — oracle-backed gates pass honestly without a human in the loop
 - itd-51 — Harness-adoption-readiness rubric ("safe enough to adopt" before a new harness arrives)
 - abcd warns when you reach past it into a tool it was built to hide — **obsolete under no-hard-deps ([adr-22](../../decisions/adrs/0022-bundled-deps-as-pluggable-adapters.md))**: with native defaults there is no wrapped foreign surface to reach past; the abstraction boundary is retired
 - abcd's largest source files become navigable packages without changing behavior
