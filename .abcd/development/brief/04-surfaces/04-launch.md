@@ -1,13 +1,13 @@
 # `/abcd:launch` — Curated Release
 
-> **Status:** design target — builds in Phase 5 (round-trip and ship). Today only the probe / dry-run stubs ship (spc-17); the full pre-flight gate suite and release flow below are not yet built.
+> **Phase ownership** ([adr-33](../../decisions/adrs/0033-launch-phase-ownership-tiered.md)): the curated-release cut — packaging with `.abcd/**` excluded plus the secret/PII scan — ships in [Phase 1](../../roadmap/phases/phase-1-ahoy.md). The full pre-flight gate suite and release automation below are separately scheduled intents (itd-65 gate suite, itd-66 render parity, itd-70 retention, itd-72 tier-b publishing, itd-73 derived versioning).
 
 ## Sub-verbs
 
 Bare `/abcd:launch` shows status + help only — never mutates state. Current sub-verbs:
 
 - **`/abcd:launch ship`** — cut a curated release artefact from the one repo: run pre-flight gates, filter the artefact (default-deny, `.abcd/**` excluded by packaging), stamp the version, and on a `v*` tag publish a GitHub Release ([adr-28](../../decisions/adrs/0028-single-repo-curated-release.md)). The flow described in §§ 1–6 below is this sub-verb's behaviour. Flag-shaped modifiers: `--version <x.y.z>`, `--allow-dirty`, `--allow-doc-warnings`.
-- **`/abcd:launch dry-run`** — **report-only preview, always exit-0** (a preview never blocks). It runs the parts of the pre-flight suite that exist today: as of spc-64 the **secret + PII scan gate** (the native scanners, see [§ 1](#1-pre-flight-gates)) runs for real in report-only mode and prints what it *would* refuse on (a finding, or a fail-closed reason such as "scanner unavailable"); the remaining gates (marker-block, `plugin.json` parse, documentation-auditor) are Phase-5 and render as "(not yet implemented)". It also produces the would-be artefact manifest, without writing the release artefact. dry-run is **not** "ship minus publish": running the *full* gate suite and **hard-failing** on a finding (exit non-zero) is the Phase-5 `ship` verb's behaviour, not dry-run's.
+- **`/abcd:launch dry-run`** — **report-only preview, always exit-0** (a preview never blocks). It runs the parts of the pre-flight suite that exist today: as of spc-64 the **secret + PII scan gate** (the native scanners, see [§ 1](#1-pre-flight-gates)) runs for real in report-only mode and prints what it *would* refuse on (a finding, or a fail-closed reason such as "scanner unavailable"); the remaining gates (marker-block, `plugin.json` parse, documentation-auditor) are the gate-suite intent's (itd-65) and render as "(not yet implemented)". It also produces the would-be artefact manifest, without writing the release artefact. dry-run is **not** "ship minus publish": running the *full* gate suite and **hard-failing** on a finding (exit non-zero) is the full `ship` verb's behaviour (itd-65 + itd-72), not dry-run's.
 
 ## 1. Pre-flight gates
 
@@ -22,7 +22,7 @@ Bare `/abcd:launch` shows status + help only — never mutates state. Current su
 - **OWASP / vulnerability check** (folded into the pre-flight suite) — warn-fail
 - **Documentation auditor** (subagent) — runs over `docs/` to verify user-facing documentation is well-formed before release — warn-fail
 
-Pre-flight report written to `.abcd/logbook/launch/<timestamp>/preflight.{json,md}` — **Phase-5 `ship` behaviour**. The spc-64 secret/PII gate is itself side-effect-free w.r.t. the repo (its only writes are to a private temp tree it removes), and `dry-run` renders the gate result inline rather than writing a report file.
+Pre-flight report written to `.abcd/logbook/launch/<timestamp>/preflight.{json,md}` — **full-`ship` behaviour (itd-65)**. The spc-64 secret/PII gate is itself side-effect-free w.r.t. the repo (its only writes are to a private temp tree it removes), and `dry-run` renders the gate result inline rather than writing a report file.
 
 ## 2. Curated release artefact (default-deny)
 
@@ -154,7 +154,7 @@ The first release cut of abcd itself is a manual `v*` tag + GitHub Release; docu
 ## 6. Acceptance
 
 - **Given** any abcd-aware terminal, **when** the user runs bare `/abcd:launch`, **then** the dispatcher shows current launch readiness (pre-flight gate state, last launch attempt timestamp), the available sub-verbs (`ship`, `dry-run`), and suggested next actions — bare invocation never mutates state.
-- **Given** a clean tree with a deliberate PII fixture (e.g., a real email in a comment) inside the resolved artefact, **when** `/abcd:launch dry-run` runs, **then** the report-only gate (spc-64) PRINTS that it *would* refuse on that finding (the offending file/line in the gate result), still **exits 0**, and writes no artefact. (The **hard-fail** on that finding — exit non-zero plus a `preflight.{json,md}` report under `.abcd/logbook/launch/<timestamp>/` — is the Phase-5 `ship` verb's behaviour, not dry-run's.)
+- **Given** a clean tree with a deliberate PII fixture (e.g., a real email in a comment) inside the resolved artefact, **when** `/abcd:launch dry-run` runs, **then** the report-only gate (spc-64) PRINTS that it *would* refuse on that finding (the offending file/line in the gate result), still **exits 0**, and writes no artefact. (The **hard-fail** on that finding — exit non-zero plus a `preflight.{json,md}` report under `.abcd/logbook/launch/<timestamp>/` — is the full `ship` verb's behaviour (itd-65), not dry-run's.)
 - **Given** a clean tree, **when** `/abcd:launch dry-run` runs, **then** the report lists exactly the include/exclude artefact manifest in [§ 2](#2-curated-release-artefact-default-deny) with no surprises and no artefact is written.
 - **Given** no phase completed since the last launch, **when** `launch ship` runs without `--version`, **then** the bump tier is **patch** (`v0.0.x`) and the next patch version is written into the **selected version location** (from `.abcd/config/version-location.json`, per [§ 3](#3-versioning--marketplace)) in the **release artefact** only — the working-tree manifests stay unversioned (adr-19, adr-28) — plus the canonical `.claude-plugin/marketplace.json`, never a hard-coded `plugin.json`.
 - **Given** every spec anchored to a phase (`phase:` frontmatter) is closed and that phase was not yet complete at the last recorded launch, **when** `launch ship` runs without `--version`, **then** the bump tier is **minor** (`v0.x.0`) and the launch report names the completed phase.
