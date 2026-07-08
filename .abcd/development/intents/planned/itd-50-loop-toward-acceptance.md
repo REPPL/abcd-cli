@@ -9,6 +9,8 @@ related_adrs: []
 routed_from: ["spc-33:I-D3"]
 glossary_terms_used: [core/intent, core/spec, core/phase, core/oracle, core/lifeboat, interview/session]
 grilled_at: 2026-06-02
+blocked_by: [itd-53]
+builds_on: [itd-44, itd-43]
 ---
 
 # The Audit Loop Drives An Intent To Acceptance — Or Calls For A Replan

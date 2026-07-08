@@ -5,6 +5,8 @@ spec_id: null
 kind: standalone
 suggested_kind: null
 reclassification_history: []
+blocked_by: [itd-5]
+builds_on: [itd-15]
 ---
 
 # Prompts Are Versioned Like Code

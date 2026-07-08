@@ -16,6 +16,7 @@ glossary_terms_used:
   - core/intent
   - distribution/end-user
   - distribution/release
+builds_on: [itd-62]
 ---
 
 # The Amateur Coder Is Told What Is Being Installed And Why, Not Just Asked To Run A Command

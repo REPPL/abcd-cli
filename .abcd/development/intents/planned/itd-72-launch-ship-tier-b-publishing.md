@@ -16,6 +16,7 @@ glossary_terms_used:
   - distribution/release
   - distribution/version
   - distribution/end-user
+blocked_by: [itd-67]
 ---
 
 # Publishing A Release Is One Atomic, Refusable `ship`

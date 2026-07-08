@@ -5,6 +5,8 @@ spec_id: null
 kind: standalone
 suggested_kind: null
 reclassification_history: []
+blocked_by: [itd-27]
+builds_on: [itd-28]
 ---
 
 # Domain Experts Run A Spec Autonomously And Recover From Anything Without Touching Git

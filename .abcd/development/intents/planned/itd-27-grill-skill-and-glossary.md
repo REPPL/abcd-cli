@@ -23,6 +23,7 @@ glossary_terms_used:
   - core/spec
   - core/voyage
   - interview/session
+builds_on: [itd-1]
 ---
 
 # Domain Experts Get Their Intents Grilled Before Anyone Codes Them

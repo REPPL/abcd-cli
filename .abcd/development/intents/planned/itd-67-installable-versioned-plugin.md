@@ -22,6 +22,7 @@ glossary_terms_used:
 warrants_assumed:
 - "The single abcd repo IS the marketplace; packaging excludes .abcd/** from the release artifact (adr-28)."
 - "plugin.json.version as the sole in-file version is compatible with the doc-fidelity gate (a machine manifest field is not prose)."
+builds_on: [itd-66]
 ---
 
 # abcd Is An Installable, Versioned Claude Code Plugin Whose Repo Is Its Own Marketplace And Whose Every Launch Bumps, Tags, And Publishes A New Version

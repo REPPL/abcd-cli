@@ -18,6 +18,8 @@ glossary_terms_used:
   - interview/session
 warrants_assumed:
   - Product thinkers act on a surfaced sibling-overlap — they kill or merge the redundant intent rather than answering "they're different" and moving on. The grill captures the answer (per acceptance criteria) but does not enforce that the answer is honest.
+blocked_by: [itd-27]
+builds_on: [itd-41]
 ---
 
 # Grill Reads an Intent Against the Brief and Its Siblings, Not Just the Glossary
