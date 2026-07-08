@@ -109,7 +109,7 @@ Pass B's chat-distiller is exempt (already streams by per-spine-entry queries). 
 │   └── code-principles.{json,md}       # from code-rescuer
 ├── docs/
 │   ├── adrs/                           # verbatim ADR copies
-│   ├── terminology.md                  # rendered from .abcd/development/foundation/terminology/<context>/<term>.md (per itd-27 / spc-3)
+│   ├── terminology.md                  # rendered from .abcd/development/brief/glossary/<context>/<term>.md (per itd-27 / spc-3, adr-30)
 │   ├── claude-md-snapshot.md
 │   └── tutorials/ guides/ reference/ explanation/   # verbatim from source docs/
 ├── assets/

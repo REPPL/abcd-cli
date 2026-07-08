@@ -13,6 +13,8 @@ The scope this brief covers is bounded by what is bundled into the six planned p
 - `/abcd:intent` — press-release intent capture — see [`04-surfaces/05-intent.md`](../04-surfaces/05-intent.md)
 - `/abcd:capture` — issue ledger — see [`04-surfaces/06-capture.md`](../04-surfaces/06-capture.md)
 - `/abcd:memory` — multi-upstream curated knowledge substrate (per itd-36) — see [`05-internals/07-memory.md`](../05-internals/07-memory.md)
+- `/abcd` — top-level where-am-i status board (per itd-20) — see [`04-surfaces/08-abcd.md`](../04-surfaces/08-abcd.md)
+- `/abcd:reflect` — phase retrospective (per itd-24) — see [`04-surfaces/09-reflect.md`](../04-surfaces/09-reflect.md)
 
 **Operator-internal commands** (wiring under `commands/abcd/`, NOT part of the user-facing surface above): `/abcd:run` — the itd-29 autonomous-run operator surface (`status`/`pause`/`resume`/`preflight`; read-mostly over the pluggable autonomous-run seam ([adr-27](../../decisions/adrs/0027-autonomous-run-pluggable-seam.md)), v1 never starts or kills the loop). See [`04-surfaces/README.md`](../04-surfaces/README.md) for the user-facing-vs-operator-internal boundary.
 
