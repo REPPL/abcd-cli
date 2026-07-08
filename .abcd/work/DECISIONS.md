@@ -21,3 +21,10 @@ parallel-agent merge contention bites.
   .work.local (local). `docs/` user-facing only.
 - 2026-07-06 — Module path `github.com/REPPL/abcd-cli`; Cobra approved as the CLI
   framework (matches ferry and the companion harness).
+- 2026-07-08 — Confidential sources: global user-level corpus (CSL-JSON + grep
+  corpus, local no-remote git), append-only JSONL influence ledger per repo,
+  banlist patterns generated from confidential entries into the itd-74 private
+  guard; convention + skill first, `abcd source` verbs deferred (itd-76). Quarto
+  chosen for eventual paper reconstruction; RAG rejected at this scale.
+- 2026-07-08 — Personas in any scenario are always Alice, Bob, Carol (in that
+  order); the user is they/them. Recorded as a principle.
