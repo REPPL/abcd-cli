@@ -28,6 +28,13 @@ parallel-agent merge contention bites.
   chosen for eventual paper reconstruction; RAG rejected at this scale.
 - 2026-07-08 — Personas in any scenario are always Alice, Bob, Carol (in that
   order); the user is they/them. Recorded as a principle.
+- 2026-07-08 — Consume-model interview: `spec_id` is SCALAR (never a list) —
+  split-the-intent is doctrine (itd-67/72 precedent); task decomposition lives
+  inside the spec. Principles/disciplines get a promotion path: enforced
+  principle ⇒ discipline-kind intent (personas principle promotes when its
+  registry lint ships). Coverage vocabulary (uncovered / covered-shallow /
+  covered-deep / orphaned / unwanted) lands as itd-53's gate reporting
+  language; "done" = covered-deep AND the intent's own criteria MET.
 - 2026-07-08 — Persona SSOTs reconciled: `personas.json` is the single registry
   (13, expandable, alphabetical sequence); selection is BY ROLE, the role's
   registered name is used, never a name picked directly; all personas and the

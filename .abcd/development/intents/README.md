@@ -138,10 +138,12 @@ Continuously: intent-fidelity-reviewer's shape-classification role suggests
 
 | File | Frontmatter field |
 |---|---|
-| `intents/{drafts,planned,shipped}/itd-N-<slug>.md` | `spec_id: spc-N` (or list, or `null` when in drafts/) |
-| the native spec `spc-N-<slug>` | `intent: itd-N` (or list) |
+| `intents/{drafts,planned,shipped}/itd-N-<slug>.md` | `spec_id: spc-N` (scalar, or `null` when in drafts/ — **never a list**) |
+| the native spec `spc-N-<slug>` | `intent: itd-N` (or list — one spec may consume several intents; that is the bundle direction) |
 
-Both directions present once `/abcd:intent plan` runs. `intent_lint` (pre-commit + CI) verifies they agree.
+Both directions present once `/abcd:intent plan` runs. `intent_lint` (pre-commit + CI) verifies they agree, and rejects a list-valued `spec_id`.
+
+**Split-the-intent doctrine.** An intent is the unit of consumption: it is implemented by exactly one spec. Work too big for one spec decomposes into *tasks inside* that spec; an intent containing two separately verifiable promises is two intents — split it (precedent: the launch PRD's Tier A/B split into itd-67 and itd-72). This keeps the close hook singular, coverage computable, and doneness unambiguous — an intent can never be half-consumed and called done.
 
 ---
 
