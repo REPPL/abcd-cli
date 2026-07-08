@@ -40,3 +40,8 @@ parallel-agent merge contention bites.
 - 2026-07-08 — `~/.abcd/` blessed as abcd's user-level home (fourth tier,
   additive to repo `.abcd/`), path configurable; relocation wizard recorded as
   itd-77.
+- 2026-07-08 — Author bans FLIPPED to opt-in (`ban_authors: true`), superseding
+  today's default-on decision: the actual corpus population (own submitted
+  work, purchased reports, private repos) makes author bans near-pure false
+  positives — they would ban the user's own name — while title/alias patterns
+  carry the real protection.

@@ -51,11 +51,14 @@ guard enforces the rule mechanically.
 ## Guard chain
 
 1. `sources.json` marks an entry `confidential: true` with `aliases`.
-2. `sync-banlist` derives case-insensitive patterns (title, aliases, and full
-   author names — author bans default on, per-source opt-out via
-   `custom.ban_authors: false` for authors with citable public work) and
-   maintains a fenced generated block in the repo's untracked
-   `.abcd/.work.local/private-names.txt`; hand-added lines survive.
+2. `sync-banlist` derives case-insensitive patterns — title and aliases
+   always; full author names only by per-source opt-in
+   (`custom.ban_authors: true`, for a collaboration that is itself secret;
+   the common confidential types — own submitted work, purchased reports,
+   private repos — are protected by title/aliases, and banning their authors
+   would mostly ban legitimate names) — and maintains a fenced generated
+   block in the repo's untracked `.abcd/.work.local/private-names.txt`;
+   hand-added lines survive.
 3. The committed `.githooks/pre-commit` guard (itd-74's private layer)
    **auto-refreshes** the generated block when the corpus is present (no-op
    otherwise — CI, fresh clones), then blocks any staged line matching — the
