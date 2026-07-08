@@ -45,6 +45,11 @@ parallel-agent merge contention bites.
   work, purchased reports, private repos) makes author bans near-pure false
   positives — they would ban the user's own name — while title/alias patterns
   carry the real protection.
+- 2026-07-08 — Corpus restructured to class-segregated per-source folders
+  (confidential/<key>/, public/<key>/): confidentiality is declared at
+  ingestion and LOCATION is its single source of truth (flag mirrors, tooling
+  refuses on mismatch); derived artifacts inherit by location; declassification
+  is a visible git mv.
 - 2026-07-08 — Severity ≠ priority (records an earlier-session decision):
   intents declare `severity` (capture-ledger enum) and edges (`blocked_by`,
   `builds_on`); effective priority is DERIVED via priority inheritance (max of

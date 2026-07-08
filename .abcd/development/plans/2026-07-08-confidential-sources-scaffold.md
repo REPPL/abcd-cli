@@ -23,17 +23,25 @@ first**, with promotion to `abcd source` verbs recorded as itd-76.
 
 ```
 ~/.abcd/sources/
-  README.md            the manual: schemas, workflows, guard usage
-  sources.json         CSL-JSON bibliography — single source of truth;
-                       custom: {confidential, permission_status, keywords, aliases, file}
-  corpus/<key>.md      extracted text per source, frontmatter maps hit → CSL key
-  files/<key>.<ext>    original documents
-  ledger/<repo>.jsonl  append-only influence records, one file per consuming repo
-  bin/add-source       register + convert + commit
-  bin/sync-banlist     confidential entries → generated block in a repo's
-                       untracked private-names banlist (the itd-74 private layer)
-  bin/cite-guard       scan text; reports offending entries by key only
+  README.md               the manual: schemas, workflows, guard usage
+  sources.json             CSL-JSON bibliography — metadata source of truth;
+                           custom: {confidential, permission_status, keywords,
+                           aliases, ban_authors, file}
+  confidential/<key>/      one folder per confidential source: original.<ext>,
+                           text.md (extraction), summaries, notes — together
+  public/<key>/            same shape for freely citable sources
+  ledger/<repo>.jsonl      append-only influence records, one file per repo
+  bin/add-source           register + convert + commit (class set at ingestion)
+  bin/sync-banlist         confidential entries → generated block in a repo's
+                           untracked private-names banlist (itd-74 layer)
+  bin/cite-guard           scan text; reports offending entries by key only
 ```
+
+**Location is the classification**: confidentiality is declared once, at
+ingestion, and the folder is the single source of truth — `sources.json`
+mirrors it and the pattern derivation refuses on any mismatch. Derived
+artifacts (summaries, notes) live inside the source's folder and inherit its
+class; declassification is a `git mv` to `public/` — one visible commit.
 
 Ledger record: `{ts, repo, decision_ref, claim, source_key, locator,
 influence: supports|contradicts|method|background, cited_publicly: false}` —
