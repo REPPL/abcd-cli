@@ -1,6 +1,6 @@
 # Scope
 
-The scope this brief covers is bounded by what is bundled into the six planned phases (Phase 0 — Substrate & disciplines through Phase 5 — round-trip; see [`roadmap/phases/README.md`](../../roadmap/phases/README.md)) plus what is explicitly slated for a later phase.
+The scope this brief covers is bounded by what is bundled into the seven planned phases (Phase 0 — Foundations through Phase 6 — Lifeboat round-trip; see [`roadmap/phases/README.md`](../../roadmap/phases/README.md)) plus what is explicitly slated for a later phase.
 
 ## What the phases deliver
 
