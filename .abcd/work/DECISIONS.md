@@ -28,3 +28,15 @@ parallel-agent merge contention bites.
   chosen for eventual paper reconstruction; RAG rejected at this scale.
 - 2026-07-08 — Personas in any scenario are always Alice, Bob, Carol (in that
   order); the user is they/them. Recorded as a principle.
+- 2026-07-08 — itd-76 grilled: leak guard promises literal strings only
+  (paraphrase risk stated, handled behaviourally + review); citation is a
+  two-level AND (source permission_status AND per-line cited_publicly); author
+  bans default on with per-source ban_authors opt-out; standalone `source`
+  domain (itd-16 a possible backend, not a dependency); pre-commit auto-
+  refreshes the generated banlist; public render proven by structural filter
+  AND post-render lint; team share of citation data via committed
+  `.abcd/work/references.json` (share/ingest); durability = machine backup +
+  git bundle, multi-machine deferred.
+- 2026-07-08 — `~/.abcd/` blessed as abcd's user-level home (fourth tier,
+  additive to repo `.abcd/`), path configurable; relocation wizard recorded as
+  itd-77.
