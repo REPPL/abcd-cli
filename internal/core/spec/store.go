@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/REPPL/abcd-cli/internal/core/frontmatter"
 )
 
 // Load discovers spec files under both buckets, parses their frontmatter, and
@@ -62,11 +64,11 @@ func loadBucket(repoRoot, bucket string) ([]Spec, error) {
 // parseSpec builds a Spec from a file's content and validates it. A file whose
 // frontmatter lacks a well-formed id or intent is malformed and rejected.
 func parseSpec(relPath, content, bucket string) (Spec, error) {
-	fields := frontmatterFields(strings.Split(content, "\n"))
+	fields := frontmatter.Fields(strings.Split(content, "\n"))
 	sp := Spec{
-		ID:     fields["id"].value,
-		Slug:   fields["slug"].value,
-		Intent: fields["intent"].value,
+		ID:     fields["id"].Value,
+		Slug:   fields["slug"].Value,
+		Intent: fields["intent"].Value,
 		Status: bucket,
 		Path:   relPath,
 	}
@@ -128,9 +130,9 @@ func maxIntentSpecNum(repoRoot string) (int, error) {
 			if err != nil {
 				return 0, err
 			}
-			fields := frontmatterFields(strings.Split(string(data), "\n"))
-			v := fields["spec_id"].value
-			if isNull(v) {
+			fields := frontmatter.Fields(strings.Split(string(data), "\n"))
+			v := fields["spec_id"].Value
+			if frontmatter.IsNull(v) {
 				continue
 			}
 			if n := specNum(v); n > max {

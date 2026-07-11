@@ -12,10 +12,10 @@
 // bucket. The load-bearing field is intent: itd-N, the link a spec declares to
 // the intent it realises.
 //
-// Frontmatter is read by a private line scanner (frontmatterFields), not a YAML
-// parser — the package pulls in zero new dependencies. Ids are validated against
-// strict regexes before any path is built, so a hostile id can never traverse
-// out of the spec store.
+// Frontmatter is read by the shared internal/core/frontmatter line scanner, not
+// a YAML parser — the package pulls in zero new dependencies. Ids are validated
+// against strict regexes before any path is built, so a hostile id can never
+// traverse out of the spec store.
 package spec
 
 import (
@@ -134,49 +134,4 @@ func renderSpec(id, slug, intentID string) string {
 	fmt.Fprintf(&b, "# %s\n\n", slug)
 	b.WriteString("## Summary\n\nTODO\n")
 	return b.String()
-}
-
-// --- frontmatter line scanner ---
-//
-// Replicated privately (not imported) from internal/core/lint so this package
-// stays dependency-free: it is a line scanner, not a YAML parser. It reads only
-// the block between the first two `---` lines, top-level keys only, first key
-// wins.
-
-// fmKeyRe matches a top-level frontmatter key (column 0, no indentation).
-var fmKeyRe = regexp.MustCompile(`^([A-Za-z0-9_]+):(.*)$`)
-
-// fmField is a frontmatter key's value and 1-based source line.
-type fmField struct {
-	value string
-	line  int
-}
-
-// frontmatterFields returns the top-level keys of the leading frontmatter block
-// (between the first two `---` lines). Nested keys and list items are ignored.
-func frontmatterFields(lines []string) map[string]fmField {
-	fields := map[string]fmField{}
-	if len(lines) == 0 || strings.TrimRight(lines[0], "\r") != "---" {
-		return fields
-	}
-	for i := 1; i < len(lines); i++ {
-		line := strings.TrimRight(lines[i], "\r")
-		if line == "---" {
-			break
-		}
-		m := fmKeyRe.FindStringSubmatch(line)
-		if m == nil {
-			continue
-		}
-		key := m[1]
-		if _, exists := fields[key]; !exists {
-			fields[key] = fmField{value: strings.TrimSpace(m[2]), line: i + 1}
-		}
-	}
-	return fields
-}
-
-// isNull treats an empty value and the YAML nulls ""/"null"/"~" as null.
-func isNull(v string) bool {
-	return v == "" || v == "null" || v == "~"
 }
