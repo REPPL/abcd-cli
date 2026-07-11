@@ -588,6 +588,136 @@ func TestReceiptGate(t *testing.T) {
 	}
 }
 
+func TestGateLockstep(t *testing.T) {
+	root := t.TempDir()
+
+	workflow := "name: release\n" +
+		"on:\n" +
+		"  push:\n" +
+		"    tags: ['v*']\n" +
+		"jobs:\n" +
+		"  verify:\n" +
+		"    runs-on: ubuntu-latest\n" +
+		"    steps:\n" +
+		"      - name: Check out the pushed commit\n" +
+		"      - name: Set up Go\n" +
+		"      - name: Format (gofmt)\n" +
+		"      - name: Build\n" +
+		"      - name: Vet\n" +
+		"  release:\n" +
+		"    steps:\n" +
+		"      - name: Publish\n" // a step in another job — must NOT be counted
+	writeFile(t, root, ".github/workflows/release.yml", workflow)
+
+	runbook := func(gates string) string {
+		return "# Release gate\n\n## Deterministic gates (CI-enforced)\n\n" + gates +
+			"\n> a staging note, not a gate\n\n## Semantic gates\n\n1. Not a deterministic gate\n"
+	}
+	// In-lockstep: exactly the verify gate steps (setup steps ignored).
+	writeFile(t, root, "runbook.md", runbook("1. Format (gofmt)\n2. Build\n3. Vet\n"))
+
+	cfg := func() RuleConfig {
+		return RuleConfig{
+			Enabled: true, Severity: "blocker",
+			Runbook: "runbook.md", Workflow: ".github/workflows/release.yml",
+			Job: "verify", IgnoreSteps: []string{"Check out the pushed commit", "Set up Go"},
+		}
+	}
+	run := func() []Finding {
+		fs, err := Lint(Config{Rules: map[string]RuleConfig{"gate_lockstep": cfg()}}, root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return fs
+	}
+
+	// 1. Lists agree → clean.
+	if n := countRule(run(), "gate_lockstep"); n != 0 {
+		t.Fatalf("matching lists should be clean, got %d: %+v", n, run())
+	}
+
+	// 2. A verify step missing from the runbook → BLOCK.
+	writeFile(t, root, "runbook.md", runbook("1. Format (gofmt)\n2. Build\n")) // drop Vet
+	if n := countRule(run(), "gate_lockstep"); n != 1 {
+		t.Fatalf("a workflow gate missing from the runbook should fire once, got %d: %+v", n, run())
+	}
+
+	// 3. A runbook gate not in the workflow → BLOCK.
+	writeFile(t, root, "runbook.md", runbook("1. Format (gofmt)\n2. Build\n3. Vet\n4. Phantom Gate\n"))
+	if n := countRule(run(), "gate_lockstep"); n != 1 {
+		t.Fatalf("a phantom runbook gate should fire once, got %d: %+v", n, run())
+	}
+
+	// 4. Setup steps in the ignore list are not required in the runbook (already
+	// clean in case 1 proves this); dropping an ignore entry surfaces them.
+	c := cfg()
+	c.IgnoreSteps = nil
+	writeFile(t, root, "runbook.md", runbook("1. Format (gofmt)\n2. Build\n3. Vet\n"))
+	fs, err := Lint(Config{Rules: map[string]RuleConfig{"gate_lockstep": c}}, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := countRule(fs, "gate_lockstep"); n != 2 { // Check out + Set up Go now unlisted
+		t.Fatalf("un-ignored setup steps should each fire, got %d: %+v", n, fs)
+	}
+
+	lint := func(c RuleConfig) []Finding {
+		fs, err := Lint(Config{Rules: map[string]RuleConfig{"gate_lockstep": c}}, root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return fs
+	}
+
+	// 5. Non-empty floor: a renamed runbook heading parses to zero gates → fail
+	// closed (the double-empty / rename silent-pass hole).
+	writeFile(t, root, "renamed.md", "# R\n\n## CI checks\n\n1. Format (gofmt)\n2. Build\n3. Vet\n")
+	c5 := cfg()
+	c5.Runbook, c5.MinGates = "renamed.md", 3
+	if n := countRule(lint(c5), "gate_lockstep"); n == 0 {
+		t.Fatal("a renamed heading (zero parsed gates) must trip the non-empty floor")
+	}
+
+	// 6. The alternate step form (`- uses:` then `name:` on the next line) is seen,
+	// not invisible — matching runbook ⇒ clean.
+	writeFile(t, root, ".github/workflows/alt.yml", "name: r\non:\n  push:\njobs:\n  verify:\n    steps:\n"+
+		"      - name: Format (gofmt)\n      - uses: some/scanner@v1\n        name: Secret Scan\n      - name: Build\n")
+	writeFile(t, root, "alt-runbook.md", runbook("1. Format (gofmt)\n2. Secret Scan\n3. Build\n"))
+	c6 := cfg()
+	c6.Workflow, c6.Runbook, c6.MinGates, c6.IgnoreSteps = ".github/workflows/alt.yml", "alt-runbook.md", 3, nil
+	if n := countRule(lint(c6), "gate_lockstep"); n != 0 {
+		t.Fatalf("alternate `- uses:`/`name:` step form must be captured, got %d: %+v", n, lint(c6))
+	}
+
+	// 7. A 2-space comment inside the job does not close it early (steps after it
+	// stay in scope).
+	writeFile(t, root, ".github/workflows/cmt.yml", "name: r\non:\n  push:\njobs:\n  verify:\n    steps:\n"+
+		"      - name: Format (gofmt)\n  # a stray 2-space comment: not a job\n      - name: Build\n      - name: Vet\n")
+	writeFile(t, root, "clean-runbook.md", runbook("1. Format (gofmt)\n2. Build\n3. Vet\n"))
+	c7 := cfg()
+	c7.Workflow, c7.Runbook, c7.MinGates, c7.IgnoreSteps = ".github/workflows/cmt.yml", "clean-runbook.md", 3, nil
+	if n := countRule(lint(c7), "gate_lockstep"); n != 0 {
+		t.Fatalf("a 2-space comment must not drop steps after it, got %d: %+v", n, lint(c7))
+	}
+
+	// 8. A configured file that does not exist → fail loud, never silent.
+	c8 := cfg()
+	c8.Runbook = "does-not-exist.md"
+	if n := countRule(lint(c8), "gate_lockstep"); n == 0 {
+		t.Fatal("a missing configured runbook must fail closed")
+	}
+
+	// 9. Quote normalization is symmetric — a quoted workflow name equals an
+	// unquoted runbook item.
+	writeFile(t, root, ".github/workflows/q.yml", "name: r\non:\n  push:\njobs:\n  verify:\n    steps:\n"+
+		"      - name: \"Format (gofmt)\"\n      - name: Build\n      - name: Vet\n")
+	c9 := cfg()
+	c9.Workflow, c9.Runbook, c9.MinGates, c9.IgnoreSteps = ".github/workflows/q.yml", "clean-runbook.md", 3, nil
+	if n := countRule(lint(c9), "gate_lockstep"); n != 0 {
+		t.Fatalf("quoted vs unquoted gate names must normalize equal, got %d: %+v", n, lint(c9))
+	}
+}
+
 // presentTenseTokens mirrors the change-narration phrase list shipped in
 // .abcd/docs-lint.json (word-boundary, case-insensitive, inline-escape).
 func presentTenseTokens() []BannedToken {

@@ -90,6 +90,22 @@ type RuleConfig struct {
 	// Release-time input (release.yml supplies the tagged commit); empty while the
 	// rule is disabled for ordinary development.
 	Commit string `json:"commit"`
+	// Runbook is the gate_lockstep runbook path (its numbered "Deterministic
+	// gates" list), repo-relative.
+	Runbook string `json:"runbook"`
+	// Workflow is the gate_lockstep CI workflow path — the source of truth for the
+	// deterministic gate list, repo-relative.
+	Workflow string `json:"workflow"`
+	// Job is the gate_lockstep workflow job whose step names are the gate list.
+	Job string `json:"job"`
+	// IgnoreSteps are workflow step names that are setup, not gates, and so are
+	// excluded from the lockstep comparison.
+	IgnoreSteps []string `json:"ignore_steps"`
+	// MinGates is the gate_lockstep non-empty floor: each side must parse at least
+	// this many gates or the rule fails closed (an under-count means the parser or
+	// a heading/job rename silently dropped gates). It is the safety net that makes
+	// the hand-parse fail-closed. Enforced as at least 1 when the rule is enabled.
+	MinGates int `json:"min_gates"`
 }
 
 // LoadConfig reads and decodes a record-lint config file.

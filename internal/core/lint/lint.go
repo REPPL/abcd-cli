@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -47,9 +48,21 @@ var (
 	// (release.yml) — validated as safe path components before use.
 	receiptShaRe  = regexp.MustCompile(`^[0-9a-f]{7,64}$`)
 	receiptGateRe = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
-	specIDRe      = regexp.MustCompile(`^spc-`)
-	supersededRe  = regexp.MustCompile(`^itd-\d+`)
-	intentBuckets = map[string]bool{
+	// gate_lockstep hand-parsers (no YAML library — the repo has none and adds no
+	// dependency): a markdown numbered-list item; the `jobs:` line; a 2-space job
+	// header (identifier, optional quotes/trailing comment, never a comment line);
+	// a job's `steps:` key; a step list-item marker; and a step `name:` key line.
+	// A non-empty floor (RuleConfig.MinGates) is the fail-closed backstop that
+	// makes any parser under-count block rather than silently pass.
+	numberedItemRe = regexp.MustCompile(`^\s*\d+\.\s+(.+?)\s*$`)
+	jobsSectionRe  = regexp.MustCompile(`^jobs:\s*(#.*)?$`)
+	jobHeaderRe    = regexp.MustCompile(`^  ["']?([A-Za-z0-9_-]+)["']?:\s*(#.*)?$`)
+	stepsKeyRe     = regexp.MustCompile(`^\s+steps:\s*(#.*)?$`)
+	stepMarkerRe   = regexp.MustCompile(`^\s+-\s+(.*\S)\s*$`)
+	stepNameKeyRe  = regexp.MustCompile(`^\s+name:\s*(.+?)\s*$`)
+	specIDRe       = regexp.MustCompile(`^spc-`)
+	supersededRe   = regexp.MustCompile(`^itd-\d+`)
+	intentBuckets  = map[string]bool{
 		"drafts": true, "planned": true, "shipped": true,
 		"disciplines": true, "superseded": true,
 	}
@@ -178,6 +191,16 @@ func Lint(cfg Config, repoRoot string) ([]Finding, error) {
 			return nil, err
 		}
 		findings = append(findings, rg...)
+	}
+
+	// gate_lockstep keeps the release-gate runbook's deterministic-gate list in
+	// lockstep with the CI workflow (both outside cfg.Roots), so it runs once here.
+	if glCfg, ok := cfg.Rules["gate_lockstep"]; ok && glCfg.Enabled {
+		gl, err := checkGateLockstep(repoRoot, glCfg)
+		if err != nil {
+			return nil, err
+		}
+		findings = append(findings, gl...)
 	}
 
 	sortFindings(findings)
@@ -641,6 +664,205 @@ func checkReceiptGate(repoRoot string, cfg RuleConfig) ([]Finding, error) {
 		}
 	}
 	return out, nil
+}
+
+// checkGateLockstep asserts the release-gate runbook's deterministic-gate list
+// is in lockstep with the CI workflow's gate steps — neither is a projection of
+// the other (the runbook carries prose the workflow can't, the workflow carries
+// setup the runbook shouldn't), so the anti-drift shape is a consistency check,
+// not generate-from-source. A gate in one but not the other BLOCKS. Both are
+// hand-parsed (no YAML dependency): the runbook's numbered "Deterministic gates"
+// list, and the named steps of the workflow's target job minus the configured
+// setup steps.
+func checkGateLockstep(repoRoot string, cfg RuleConfig) ([]Finding, error) {
+	if cfg.Runbook == "" || cfg.Workflow == "" {
+		return nil, nil
+	}
+	minGates := cfg.MinGates
+	if minGates < 1 {
+		minGates = 1 // enabled ⇒ at least a non-empty floor, never a vacuous pass
+	}
+
+	var out []Finding
+	block := func(file, msg string) {
+		out = append(out, Finding{File: file, Line: 0, RuleID: "gate_lockstep", Severity: cfg.Severity, Message: msg})
+	}
+
+	// A configured path that does not resolve is drift/misconfig, not "clean" —
+	// fail loud rather than parsing an empty list that would pass vacuously.
+	runbookExists, err := fileExists(filepath.Join(repoRoot, cfg.Runbook))
+	if err != nil {
+		return nil, err
+	}
+	workflowExists, err := fileExists(filepath.Join(repoRoot, cfg.Workflow))
+	if err != nil {
+		return nil, err
+	}
+	if !runbookExists {
+		block(cfg.Runbook, "gate_lockstep runbook '"+cfg.Runbook+"' does not exist; the release gate fails closed")
+	}
+	if !workflowExists {
+		block(cfg.Workflow, "gate_lockstep workflow '"+cfg.Workflow+"' does not exist; the release gate fails closed")
+	}
+	if !runbookExists || !workflowExists {
+		return out, nil
+	}
+
+	runbookGates, err := runbookGateList(repoRoot, cfg.Runbook)
+	if err != nil {
+		return nil, err
+	}
+	workflowGates, err := workflowStepNames(repoRoot, cfg.Workflow, cfg.Job, cfg.IgnoreSteps)
+	if err != nil {
+		return nil, err
+	}
+
+	// Non-empty floor: an under-count means a heading/job rename, a missed step
+	// form, or a mis-scoped job silently dropped gates. This is the fail-closed
+	// backstop that turns every such under-count loud instead of a silent pass.
+	if len(runbookGates) < minGates {
+		block(cfg.Runbook, "gate_lockstep parsed "+strconv.Itoa(len(runbookGates))+" runbook gate(s), below the expected minimum "+strconv.Itoa(minGates)+"; the release gate fails closed")
+	}
+	if len(workflowGates) < minGates {
+		block(cfg.Workflow, "gate_lockstep parsed "+strconv.Itoa(len(workflowGates))+" '"+cfg.Job+"' gate(s) from "+cfg.Workflow+", below the expected minimum "+strconv.Itoa(minGates)+"; the release gate fails closed")
+	}
+
+	inWorkflow := make(map[string]bool, len(workflowGates))
+	for _, g := range workflowGates {
+		inWorkflow[g] = true
+	}
+	inRunbook := make(map[string]bool, len(runbookGates))
+	for _, g := range runbookGates {
+		inRunbook[g] = true
+	}
+	for _, g := range runbookGates {
+		if !inWorkflow[g] {
+			block(cfg.Runbook, "runbook lists deterministic gate '"+g+"' that is not a '"+cfg.Job+"' step in "+cfg.Workflow)
+		}
+	}
+	for _, g := range workflowGates {
+		if !inRunbook[g] {
+			block(cfg.Workflow, cfg.Workflow+" '"+cfg.Job+"' step '"+g+"' is missing from the runbook's deterministic gates ("+cfg.Runbook+")")
+		}
+	}
+	return out, nil
+}
+
+// runbookGateList extracts the numbered items under the runbook's "Deterministic
+// gates" heading (case-insensitive), stopping at the next heading, with the same
+// surrounding-quote normalization the workflow side uses so identical gates never
+// look different. A missing file yields nil — the caller has already failed it
+// closed.
+func runbookGateList(repoRoot, rel string) ([]string, error) {
+	data, err := os.ReadFile(filepath.Join(repoRoot, rel))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var gates []string
+	inSection := false
+	for _, line := range strings.Split(string(data), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "#") {
+			inSection = strings.Contains(strings.ToLower(trimmed), "deterministic gate")
+			continue
+		}
+		if !inSection {
+			continue
+		}
+		if m := numberedItemRe.FindStringSubmatch(line); m != nil {
+			gates = append(gates, strings.Trim(strings.TrimSpace(m[1]), `"'`))
+		}
+	}
+	return gates, nil
+}
+
+// workflowStepNames extracts the step names of the named job, dropping configured
+// setup steps. It scopes to the `jobs:` block (so 2-space keys under on:/
+// permissions:/concurrency: never masquerade as jobs), identifies a job only by a
+// strict 2-space header regex (so a comment such as `  # NOTE:` cannot close a
+// job early), and captures each step's name wherever it appears in the step block
+// — inline `- name:` OR a following `name:` line after `- uses:` — so the
+// alternate step form is not invisible. A missing file yields nil; the caller has
+// already failed it closed.
+func workflowStepNames(repoRoot, rel, job string, ignore []string) ([]string, error) {
+	data, err := os.ReadFile(filepath.Join(repoRoot, rel))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	ignored := make(map[string]bool, len(ignore))
+	for _, s := range ignore {
+		ignored[s] = true
+	}
+
+	var names []string
+	seenJobs, inJob, inSteps, inStep := false, false, false, false
+	var cur string
+	flush := func() {
+		if inStep {
+			name := strings.Trim(strings.TrimSpace(cur), `"'`)
+			if name != "" && !ignored[name] {
+				names = append(names, name)
+			}
+		}
+		cur, inStep = "", false
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		if !seenJobs {
+			if jobsSectionRe.MatchString(line) {
+				seenJobs = true
+			}
+			continue
+		}
+		if m := jobHeaderRe.FindStringSubmatch(line); m != nil {
+			flush()
+			inJob, inSteps = m[1] == job, false
+			continue
+		}
+		if !inJob {
+			continue
+		}
+		if stepsKeyRe.MatchString(line) {
+			inSteps = true
+			continue
+		}
+		if !inSteps {
+			continue
+		}
+		if m := stepMarkerRe.FindStringSubmatch(line); m != nil {
+			flush()
+			inStep = true
+			if content := m[1]; strings.HasPrefix(content, "name:") {
+				cur = strings.TrimSpace(strings.TrimPrefix(content, "name:"))
+			}
+			continue
+		}
+		if inStep && cur == "" {
+			if nm := stepNameKeyRe.FindStringSubmatch(line); nm != nil {
+				cur = strings.TrimSpace(nm[1])
+			}
+		}
+	}
+	flush()
+	return names, nil
+}
+
+// fileExists reports whether path exists (following symlinks). A stat error other
+// than not-exist is returned so the caller fails closed on it.
+func fileExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
 }
 
 // tokenCheck is a compiled BannedToken ready for line matching.

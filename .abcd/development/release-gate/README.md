@@ -26,11 +26,9 @@ the human-readable mirror.
 8. Reviews-charter discipline (RD001-RD003)
 9. Smoke every command (self-discovering harness)
 
-> **Design target — not yet armed.** A `record-lint` rule keeping this list in
-> lockstep with `release.yml`'s `verify` steps lands in phase 3 (see the design
-> doc). Until it arms, this mirror is kept honest by hand; per
-> [`../principles/loud-staging.md`](../principles/loud-staging.md) the gap is
-> stated, not hidden.
+This list is machine-checked: the `gate_lockstep` `record-lint` rule blocks if it
+diverges from `release.yml`'s `verify` job steps (setup steps excepted). Edit both
+together — the mirror cannot silently drift.
 
 ## Semantic gates (host-run, before the tag)
 
