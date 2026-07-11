@@ -123,11 +123,26 @@ func Plan(repoRoot, intentID string) (PlanResult, error) {
 	if !hasAcceptanceCriteria(content) {
 		return PlanResult{}, fmt.Errorf("intent: %s has no non-empty '## Acceptance Criteria' section (itd-1 discipline); refusing to plan", intentID)
 	}
+	// A draft that already carries a non-null spec_id is half-planned (and
+	// lint-invalid): refuse rather than mint a second spec for it.
+	if !frontmatter.IsNull(it.SpecID) {
+		return PlanResult{}, fmt.Errorf("intent: %s is a draft with spec_id %q already set (half-planned); refusing to plan", intentID, it.SpecID)
+	}
 
-	// 1. Mint + create the native spec (writes the reciprocal intent: itd-N).
-	sp, err := spec.Create(repoRoot, intentID, it.Slug)
+	// 1. Reuse the spec already realising this intent, or mint one. Reusing makes
+	// Plan retry-safe: a re-run after a failed drafts->planned rename completes the
+	// operation instead of duplicating the spec. Both branches write the reciprocal
+	// intent: itd-N side (Create writes it; a reused spec already carries it).
+	store, err := spec.Load(repoRoot)
 	if err != nil {
 		return PlanResult{}, err
+	}
+	sp, ok := store.ByIntent(intentID)
+	if !ok {
+		sp, err = spec.Create(repoRoot, intentID, it.Slug)
+		if err != nil {
+			return PlanResult{}, err
+		}
 	}
 
 	// 2. Set the binding kind (default standalone) while still in drafts. A draft
@@ -153,6 +168,9 @@ func Plan(repoRoot, intentID string) (PlanResult, error) {
 	plannedAbs := filepath.Join(repoRoot, plannedRel)
 	if err := ensureRealDir(filepath.Join(repoRoot, IntentsRelDir, BucketPlanned), filepath.Join(IntentsRelDir, BucketPlanned)); err != nil {
 		return PlanResult{}, err
+	}
+	if _, err := os.Lstat(plannedAbs); err == nil {
+		return PlanResult{}, fmt.Errorf("intent: refusing to overwrite existing %s", plannedRel)
 	}
 	if err := os.Rename(draftAbs, plannedAbs); err != nil {
 		return PlanResult{}, fmt.Errorf("intent: moving %s drafts->planned: %w", intentID, err)

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/REPPL/abcd-cli/internal/core/frontmatter"
+	"github.com/REPPL/abcd-cli/internal/fsutil"
 )
 
 // Load discovers spec files under both buckets, parses their frontmatter, and
@@ -114,10 +115,17 @@ func maxIntentSpecNum(repoRoot string) (int, error) {
 	max := 0
 	for _, bucket := range intentBuckets {
 		dir := filepath.Join(repoRoot, IntentsRelDir, bucket)
-		entries, err := os.ReadDir(dir)
+		di, err := os.Lstat(dir)
 		if os.IsNotExist(err) {
 			continue
 		}
+		if err != nil {
+			return 0, fmt.Errorf("spec: stat %s: %w", filepath.Join(IntentsRelDir, bucket), err)
+		}
+		if di.Mode()&os.ModeSymlink != 0 {
+			return 0, fmt.Errorf("spec: %s is a symlink (refusing to follow)", filepath.Join(IntentsRelDir, bucket))
+		}
+		entries, err := os.ReadDir(dir)
 		if err != nil {
 			return 0, fmt.Errorf("spec: reading %s: %w", filepath.Join(IntentsRelDir, bucket), err)
 		}
@@ -162,8 +170,9 @@ func Create(repoRoot, intentID, slug string) (Spec, error) {
 		return Spec{}, err
 	}
 	name := fmt.Sprintf("%s-%s.md", id, slug)
-	if err := atomicWrite(filepath.Join(openDir, name), renderSpec(id, slug, intentID)); err != nil {
-		return Spec{}, err
+	// 0o644 matches the intent-side markdown writer — both write committed design-record files.
+	if err := fsutil.WriteFileAtomic(filepath.Join(openDir, name), []byte(renderSpec(id, slug, intentID)), 0o644); err != nil {
+		return Spec{}, fmt.Errorf("spec: writing %s: %w", filepath.Join(SpecsRelDir, StatusOpen, name), err)
 	}
 	sp := Spec{
 		ID:     id,
@@ -198,6 +207,10 @@ func Close(repoRoot, specID string) (Spec, error) {
 	closedDir := filepath.Join(repoRoot, SpecsRelDir, StatusClosed)
 	if err := ensureDir(closedDir, filepath.Join(SpecsRelDir, StatusClosed)); err != nil {
 		return Spec{}, err
+	}
+	dstRel := filepath.Join(SpecsRelDir, StatusClosed, name)
+	if _, err := os.Lstat(filepath.Join(closedDir, name)); err == nil {
+		return Spec{}, fmt.Errorf("spec: refusing to overwrite existing %s", dstRel)
 	}
 	if err := os.Rename(filepath.Join(repoRoot, sp.Path), filepath.Join(closedDir, name)); err != nil {
 		return Spec{}, fmt.Errorf("spec: closing %s: %w", specID, err)
@@ -237,31 +250,6 @@ func ensureDir(dir, rel string) error {
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("spec: creating %s: %w", rel, err)
-	}
-	return nil
-}
-
-// atomicWrite writes content to a temp file in the destination directory, then
-// renames it into place so a reader never sees a partial file.
-func atomicWrite(path, content string) error {
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".spec-*.tmp")
-	if err != nil {
-		return fmt.Errorf("spec: creating temp file: %w", err)
-	}
-	tmpName := tmp.Name()
-	_, werr := tmp.WriteString(content)
-	cerr := tmp.Close()
-	if werr != nil {
-		_ = os.Remove(tmpName)
-		return fmt.Errorf("spec: writing temp file: %w", werr)
-	}
-	if cerr != nil {
-		_ = os.Remove(tmpName)
-		return fmt.Errorf("spec: closing temp file: %w", cerr)
-	}
-	if err := os.Rename(tmpName, path); err != nil {
-		_ = os.Remove(tmpName)
-		return fmt.Errorf("spec: finalising %s: %w", path, err)
 	}
 	return nil
 }

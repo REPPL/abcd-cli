@@ -170,6 +170,33 @@ func TestCloseMovesOpenToClosed(t *testing.T) {
 	}
 }
 
+// TestCloseRefusesWhenClosedTargetExists proves Close fails closed rather than
+// clobbering a same-name spec already sitting in closed/.
+func TestCloseRefusesWhenClosedTargetExists(t *testing.T) {
+	root := t.TempDir()
+	if _, err := Create(root, "itd-9", "my-feature"); err != nil {
+		t.Fatal(err)
+	}
+	// A same-name spec already occupies closed/.
+	writeFile(t, root, specsClosed+"/spc-1-my-feature.md",
+		"---\nid: spc-1\nslug: my-feature\nintent: itd-9\n---\n# pre-existing\n")
+
+	if _, err := Close(root, "spc-1"); err == nil {
+		t.Fatal("Close must refuse to overwrite an existing closed target")
+	}
+	// The open file is untouched (still there), the closed one not clobbered.
+	if _, err := os.Stat(filepath.Join(root, specsOpen, "spc-1-my-feature.md")); err != nil {
+		t.Fatalf("open file must remain after refusal: %v", err)
+	}
+	body, err := os.ReadFile(filepath.Join(root, specsClosed, "spc-1-my-feature.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), "pre-existing") {
+		t.Fatalf("closed target was clobbered:\n%s", body)
+	}
+}
+
 func TestCloseMissingFails(t *testing.T) {
 	root := t.TempDir()
 	if _, err := Close(root, "spc-99"); err == nil {

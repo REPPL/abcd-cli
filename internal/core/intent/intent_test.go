@@ -8,6 +8,7 @@ import (
 
 	"github.com/REPPL/abcd-cli/internal/core/frontmatter"
 	"github.com/REPPL/abcd-cli/internal/core/lint"
+	"github.com/REPPL/abcd-cli/internal/core/spec"
 )
 
 const (
@@ -184,6 +185,78 @@ func TestPlanRefusesNonDraft(t *testing.T) {
 		"---\nid: itd-10\nslug: alpha\nspec_id: null\nkind: standalone\n---\n# alpha\n\n## Acceptance Criteria\n\n- ok\n")
 	if _, err := Plan(root, "itd-10"); err == nil {
 		t.Fatal("Plan must refuse an intent that is not in drafts/")
+	}
+}
+
+// TestPlanReusesExistingSpecForIntent proves Plan is retry-safe: when a spec
+// already realises the intent (e.g. a prior Plan minted it but the
+// drafts->planned rename failed, leaving the intent a null-spec_id draft),
+// re-running Plan reuses that spec instead of minting a duplicate.
+func TestPlanReusesExistingSpecForIntent(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, draftsDir+"/itd-10-alpha.md", draftWithAC("itd-10", "alpha"))
+	// Pre-create the spec for this intent; the draft is still an unlinked draft.
+	sp, err := spec.Create(root, "itd-10", "alpha")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := Plan(root, "itd-10")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Spec.ID != sp.ID {
+		t.Fatalf("Plan minted a new spec %q, want reuse of %q", res.Spec.ID, sp.ID)
+	}
+	if res.Intent.Bucket != "planned" || res.Intent.SpecID != sp.ID {
+		t.Fatalf("Plan intent = %+v", res.Intent)
+	}
+
+	// Exactly one spec realises the intent (no duplicate minted).
+	store, err := spec.Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	for _, s := range store.Specs {
+		if s.Intent == "itd-10" {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("expected exactly 1 spec for itd-10, got %d: %+v", n, store.Specs)
+	}
+}
+
+// TestPlanRefusesDraftWithSpecID rejects a draft whose frontmatter already
+// carries a non-null spec_id (half-planned / lint-invalid): Plan must not mint
+// another spec for it.
+func TestPlanRefusesDraftWithSpecID(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, draftsDir+"/itd-10-alpha.md",
+		"---\nid: itd-10\nslug: alpha\nspec_id: spc-1\nkind: standalone\n---\n# alpha\n\n## Acceptance Criteria\n\n- ok\n")
+	if _, err := Plan(root, "itd-10"); err == nil {
+		t.Fatal("Plan must refuse a draft that already has a non-null spec_id")
+	}
+}
+
+// TestPlanRefusesWhenPlannedTargetExists proves Plan fails closed rather than
+// clobbering a same-name file already sitting in planned/.
+func TestPlanRefusesWhenPlannedTargetExists(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root, draftsDir+"/itd-10-alpha.md", draftWithAC("itd-10", "alpha"))
+	writeFile(t, root, plannedDir+"/itd-10-alpha.md",
+		"---\nid: itd-10\nslug: alpha\nspec_id: null\nkind: standalone\n---\n# pre-existing\n")
+	if _, err := Plan(root, "itd-10"); err == nil {
+		t.Fatal("Plan must refuse to overwrite an existing planned target")
+	}
+	// The pre-existing planned file is untouched.
+	body, err := os.ReadFile(filepath.Join(root, plannedDir, "itd-10-alpha.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), "pre-existing") {
+		t.Fatalf("planned target was clobbered:\n%s", body)
 	}
 }
 
