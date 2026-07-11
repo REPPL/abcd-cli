@@ -4,6 +4,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+
+	"github.com/REPPL/abcd-cli/internal/core/identity"
 )
 
 // Enumerations for config-value validation.
@@ -56,6 +58,7 @@ func Detect(cwd string) (DetectionResult, error) {
 		gaps = append(gaps, detectDependencies()...)
 		gaps = append(gaps, detectSkeleton(abs)...)
 		gaps = append(gaps, detectIdentity(identity, idx)...)
+		gaps = append(gaps, detectGitIdentity(abs)...)
 		gaps = append(gaps, detectHistoryStore(identity.RootSHA)...)
 		gaps = append(gaps, detectConfigValues(abs)...)
 		gaps = append(gaps, detectMarkerDrift(abs)...)
@@ -184,6 +187,54 @@ func detectIdentity(id RepoIdentity, idx *historyIndex) []Gap {
 		})
 	}
 	return gaps
+}
+
+// detectGitIdentity compares the git author identity a commit would use against
+// the committed .abcd/config/identity.json pin (iss-62). A mismatch or an unset
+// identity is a required, resolvable gap; an un-pinned repo gets an advisory gap
+// (adopt the gate); a match yields nothing.
+func detectGitIdentity(cwd string) []Gap {
+	res, err := identity.Check(cwd)
+	if err != nil {
+		return []Gap{{
+			ID: "git_identity.uncheckable", Category: ConfigChange, Scope: "repo",
+			Title:      "git identity could not be checked",
+			Detail:     err.Error(),
+			FixHint:    "ensure git is installed and this is a git repository",
+			Required:   false,
+			Resolvable: false,
+		}}
+	}
+	switch res.Status {
+	case identity.StatusMismatch:
+		return []Gap{{
+			ID: "git_identity.mismatch", Category: ConfigChange, Scope: "repo",
+			Title:      "git commit identity does not match the pin",
+			Detail:     res.Reason,
+			FixHint:    "set this repo's git user.name/user.email to the pin in " + identity.PinRelPath + " (ahoy install proposes it)",
+			Required:   true,
+			Resolvable: true,
+		}}
+	case identity.StatusUnset:
+		return []Gap{{
+			ID: "git_identity.unset", Category: ConfigChange, Scope: "repo",
+			Title:      "git author identity is not configured",
+			Detail:     res.Reason,
+			FixHint:    "set git user.name/user.email to the pinned identity in " + identity.PinRelPath,
+			Required:   true,
+			Resolvable: true,
+		}}
+	case identity.StatusNoPin:
+		return []Gap{{
+			ID: "git_identity.unpinned", Category: ConfigChange, Scope: "repo",
+			Title:      "no git identity pin",
+			Detail:     res.Reason,
+			FixHint:    "ahoy install can pin the current git identity to " + identity.PinRelPath,
+			Required:   false,
+			Resolvable: true,
+		}}
+	}
+	return nil
 }
 
 func detectHistoryStore(rootSHA string) []Gap {
