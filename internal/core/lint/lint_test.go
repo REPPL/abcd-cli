@@ -474,6 +474,120 @@ func TestSurfaceCoverage(t *testing.T) {
 	}
 }
 
+func TestReceiptGate(t *testing.T) {
+	root := t.TempDir()
+	const sha = "0123456789abcdef0123456789abcdef01234567"
+	const other = "ffffffffffffffffffffffffffffffffffffffff"
+	reviews := filepath.Join(".abcd", "work", "reviews")
+
+	receipt := func(commit, result, model string) string {
+		return `{
+  "subject": {"digest": {"gitCommit": "` + commit + `"}},
+  "verifier": {"id": "maintainer"},
+  "timeVerified": "2026-07-11T00:00:00Z",
+  "verificationResult": "` + result + `",
+  "judgeModel": "` + model + `",
+  "policy": {"detector": "x", "version": "1"}
+}`
+	}
+	gates := []string{"docs-currency-reviewer", "iss35-brief-surface-crosscheck"}
+	baseCfg := func() RuleConfig {
+		return RuleConfig{
+			Enabled: true, Severity: "blocker",
+			ReceiptsDir: reviews, Commit: sha, RequiredGates: gates,
+		}
+	}
+	run := func(cfg RuleConfig) []Finding {
+		fs, err := Lint(Config{Rules: map[string]RuleConfig{"receipt_gate": cfg}}, root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return fs
+	}
+	put := func(commit, gate, body string) {
+		writeFile(t, root, filepath.Join(reviews, commit, gate+".json"), body)
+	}
+
+	// 1. Every required gate has a PROMOTE receipt for the target sha → clean.
+	put(sha, "docs-currency-reviewer", receipt(sha, "PROMOTE", "claude-opus-4-8"))
+	put(sha, "iss35-brief-surface-crosscheck", receipt(sha, "PROMOTE", "claude-opus-4-8"))
+	if n := countRule(run(baseCfg()), "receipt_gate"); n != 0 {
+		t.Fatalf("all-PROMOTE receipts should be clean, got %d", n)
+	}
+
+	// 2. Disabled → never fires, even pointed at a sha with no receipts.
+	cfg := baseCfg()
+	cfg.Enabled, cfg.Commit = false, other
+	if n := countRule(run(cfg), "receipt_gate"); n != 0 {
+		t.Fatalf("disabled rule must not fire, got %d", n)
+	}
+
+	// 3. Missing receipts for the target sha → fail-closed BLOCK, one per gate.
+	cfg = baseCfg()
+	cfg.Commit = other
+	if n := countRule(run(cfg), "receipt_gate"); n != len(gates) {
+		t.Fatalf("missing receipts should fire once per gate (%d), got %d", len(gates), n)
+	}
+
+	// 4. A HOLD verdict blocks (only the HOLD gate fires).
+	put(other, "docs-currency-reviewer", receipt(other, "HOLD", "claude-opus-4-8"))
+	put(other, "iss35-brief-surface-crosscheck", receipt(other, "PROMOTE", "claude-opus-4-8"))
+	if n := countRule(run(cfg), "receipt_gate"); n != 1 {
+		t.Fatalf("one HOLD should fire once, got %d", n)
+	}
+
+	// 5. subject digest ≠ target commit → BLOCK (receipt not for this release).
+	put(sha, "iss35-brief-surface-crosscheck", receipt("deadbeef", "PROMOTE", "claude-opus-4-8"))
+	if n := countRule(run(baseCfg()), "receipt_gate"); n != 1 {
+		t.Fatalf("subject mismatch should fire, got %d", n)
+	}
+	put(sha, "iss35-brief-surface-crosscheck", receipt(sha, "PROMOTE", "claude-opus-4-8"))
+
+	// 6. A blank (floating) judge model is not auditable → BLOCK.
+	put(sha, "docs-currency-reviewer", receipt(sha, "PROMOTE", ""))
+	if n := countRule(run(baseCfg()), "receipt_gate"); n != 1 {
+		t.Fatalf("blank judge model should fire, got %d", n)
+	}
+	put(sha, "docs-currency-reviewer", receipt(sha, "PROMOTE", "claude-opus-4-8"))
+
+	// 7. Malformed receipt JSON → BLOCK (never a silent pass).
+	put(sha, "iss35-brief-surface-crosscheck", "{ not json")
+	if n := countRule(run(baseCfg()), "receipt_gate"); n != 1 {
+		t.Fatalf("malformed receipt should fire, got %d", n)
+	}
+	put(sha, "iss35-brief-surface-crosscheck", receipt(sha, "PROMOTE", "claude-opus-4-8"))
+
+	// 8. Enabled with no target commit configured → fail-closed config error.
+	cfg = baseCfg()
+	cfg.Commit = ""
+	if n := countRule(run(cfg), "receipt_gate"); n == 0 {
+		t.Fatal("enabled rule with no target commit must fail closed")
+	}
+
+	// 9. Enabled with an empty required-gates list → fail closed (verifies nothing
+	// otherwise). Symmetric with the empty-commit guard.
+	cfg = baseCfg()
+	cfg.RequiredGates = nil
+	if n := countRule(run(cfg), "receipt_gate"); n == 0 {
+		t.Fatal("enabled rule with no required gates must fail closed, not pass vacuously")
+	}
+
+	// 10. A target commit that is not a valid sha (a path-traversal attempt) →
+	// fail closed, never a filesystem escape.
+	cfg = baseCfg()
+	cfg.Commit = "../../etc"
+	if n := countRule(run(cfg), "receipt_gate"); n == 0 {
+		t.Fatal("a non-sha target commit must fail closed")
+	}
+
+	// 11. An unsafe gate name (path component) → fail closed for that gate.
+	cfg = baseCfg()
+	cfg.RequiredGates = []string{"../evil"}
+	if n := countRule(run(cfg), "receipt_gate"); n == 0 {
+		t.Fatal("an unsafe gate name must fail closed")
+	}
+}
+
 // presentTenseTokens mirrors the change-narration phrase list shipped in
 // .abcd/docs-lint.json (word-boundary, case-insensitive, inline-escape).
 func presentTenseTokens() []BannedToken {

@@ -78,6 +78,18 @@ type RuleConfig struct {
 	// Patterns is the context_status_free line-match regexp list; when empty the
 	// rule falls back to contextStatusDefaultPatterns.
 	Patterns []string `json:"patterns"`
+	// ReceiptsDir is the receipt_gate directory of sha-keyed semantic-pass
+	// receipts (VSA-shaped JSON), repo-relative (default .abcd/work/reviews).
+	// Outside Roots.
+	ReceiptsDir string `json:"receipts_dir"`
+	// RequiredGates lists the semantic gates that must each have a PROMOTE receipt
+	// for the target commit before a release (e.g. docs-currency-reviewer,
+	// iss35-brief-surface-crosscheck).
+	RequiredGates []string `json:"required_gates"`
+	// Commit is the receipt_gate target commit sha whose receipts are verified.
+	// Release-time input (release.yml supplies the tagged commit); empty while the
+	// rule is disabled for ordinary development.
+	Commit string `json:"commit"`
 }
 
 // LoadConfig reads and decodes a record-lint config file.

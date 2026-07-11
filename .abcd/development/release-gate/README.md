@@ -48,18 +48,27 @@ against the exact commit to be tagged:
 
 ## Recording the semantic verdict
 
-Each semantic pass records its outcome as a **signed, commit-sha-keyed receipt**
-— a Verification Summary Attestation (VSA) shape carrying `verificationResult`
+Each semantic pass records its outcome as a **commit-sha-keyed receipt** — a
+Verification Summary Attestation (VSA) shape carrying `verificationResult`
 (PROMOTE / HOLD), the pinned judge-model snapshot, the detector version, and the
-failing categories. A `record-lint` rule then verifies, before a tag, that a
-PROMOTE receipt exists for `HEAD`'s commit; a missing or HOLD receipt **blocks**
-the release (fail-closed — an un-run semantic pass is never a silent pass).
+failing categories. Receipts live at `.abcd/work/reviews/<commit-sha>/<gate>.json`;
+[`receipt.example.json`](receipt.example.json) is the concrete shape. The
+`receipt_gate` `record-lint` rule verifies, before a tag, that each required gate
+has a PROMOTE receipt whose subject digest is the target commit and which pins a
+judge model; a missing, mismatched, malformed, HOLD, or model-less receipt
+**blocks** the release (fail-closed — an un-run semantic pass is never a silent
+pass).
 
-> **Design target — not yet armed.** The receipt schema + fail-closed verify
-> rule land in phase 2, the signing + in-`release.yml` verification in phase 4
-> (see the design doc). Until then the semantic gates are enforced by this
-> runbook as maintainer discipline, and that provisional status is stated here
-> rather than implied away.
+> **Partially armed.** The receipt schema + the fail-closed `receipt_gate` verify
+> rule exist and are tested (phase 2), but the rule is **disabled by default** —
+> it must never fire on ordinary PRs/pushes, only at release time against the
+> tagged commit. Arming it in `release.yml` (with the tagged sha) and
+> **cosign-signing** the receipt with in-`release.yml` signature verification is
+> phase 4; the runbook↔`release.yml` lockstep lint is phase 3. Until those land,
+> the release-time verification is enforced by this runbook as maintainer
+> discipline. That provisional status is stated per
+> [`../principles/loud-staging.md`](../principles/loud-staging.md), not implied
+> away.
 
 ## Procedure
 

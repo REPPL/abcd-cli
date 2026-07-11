@@ -5,6 +5,7 @@
 package lint
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -41,7 +42,11 @@ var (
 	intentIDRe   = regexp.MustCompile(`itd-\d+`)
 	intentFileRe = regexp.MustCompile(`^itd-\d+.*\.md$`)
 	// Surface registry Command cell: the bare "/abcd" top-level, or "/abcd:<name>".
-	surfaceCmdRe  = regexp.MustCompile(`^/abcd(?::([a-z0-9-]+))?$`)
+	surfaceCmdRe = regexp.MustCompile(`^/abcd(?::([a-z0-9-]+))?$`)
+	// receipt_gate arming inputs are release-time and become externally supplied
+	// (release.yml) — validated as safe path components before use.
+	receiptShaRe  = regexp.MustCompile(`^[0-9a-f]{7,64}$`)
+	receiptGateRe = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
 	specIDRe      = regexp.MustCompile(`^spc-`)
 	supersededRe  = regexp.MustCompile(`^itd-\d+`)
 	intentBuckets = map[string]bool{
@@ -161,6 +166,18 @@ func Lint(cfg Config, repoRoot string) ([]Finding, error) {
 			return nil, err
 		}
 		findings = append(findings, sc...)
+	}
+
+	// receipt_gate is the release-time verification of the semantic gates. It is
+	// disabled for ordinary development (a commit under review has no receipt yet)
+	// and armed only at release time with a target commit; it reads sha-keyed
+	// receipts outside cfg.Roots, so it also runs once here.
+	if rgCfg, ok := cfg.Rules["receipt_gate"]; ok && rgCfg.Enabled {
+		rg, err := checkReceiptGate(repoRoot, rgCfg)
+		if err != nil {
+			return nil, err
+		}
+		findings = append(findings, rg...)
 	}
 
 	sortFindings(findings)
@@ -542,6 +559,88 @@ func parseSurfaceCommand(cell string) (string, bool) {
 		return "", false
 	}
 	return m[1], true
+}
+
+// receipt is the parsed shape of a semantic-pass receipt — a Verification
+// Summary Attestation (VSA): only the fields the release gate checks.
+type receipt struct {
+	Subject struct {
+		Digest struct {
+			GitCommit string `json:"gitCommit"`
+		} `json:"digest"`
+	} `json:"subject"`
+	VerificationResult string `json:"verificationResult"`
+	JudgeModel         string `json:"judgeModel"`
+}
+
+// checkReceiptGate is the fail-closed, release-time verification of the semantic
+// gates (the LLM passes CI cannot run). For the target commit it asserts that
+// every required gate has a receipt whose subject digest is that commit, whose
+// verdict is PROMOTE, and which pins a judge model. A missing, mismatched,
+// malformed, HOLD, or model-less receipt BLOCKS — an un-run semantic pass is
+// never a silent pass. The rule is release-time only: it stays disabled for
+// ordinary development (a commit under review has no receipt yet), and
+// release.yml supplies the target commit when it arms the rule. An enabled rule
+// with no configured commit fails closed rather than passing vacuously.
+func checkReceiptGate(repoRoot string, cfg RuleConfig) ([]Finding, error) {
+	dir := cfg.ReceiptsDir
+	if dir == "" {
+		dir = filepath.Join(".abcd", "work", "reviews")
+	}
+	// Every arming-input defect fails closed with a single finding — an armed gate
+	// that has nothing valid to check is never a pass. Guards are symmetric so no
+	// missing/blank/malformed arming input can slip through to a vacuous success.
+	failClosed := func(msg string) []Finding {
+		return []Finding{{File: dir, Line: 0, RuleID: "receipt_gate", Severity: cfg.Severity, Message: msg}}
+	}
+	if cfg.Commit == "" {
+		return failClosed("receipt_gate is enabled but no target commit is configured; the release gate fails closed"), nil
+	}
+	if !receiptShaRe.MatchString(cfg.Commit) {
+		return failClosed("receipt_gate target commit '" + cfg.Commit + "' is not a valid commit sha; the release gate fails closed"), nil
+	}
+	if len(cfg.RequiredGates) == 0 {
+		return failClosed("receipt_gate is enabled but lists no required gates; the release gate fails closed"), nil
+	}
+
+	var out []Finding
+	add := func(rel, msg string) {
+		out = append(out, Finding{
+			File: rel, Line: 0, RuleID: "receipt_gate", Severity: cfg.Severity, Message: msg,
+		})
+	}
+	for _, gate := range cfg.RequiredGates {
+		if !receiptGateRe.MatchString(gate) {
+			add(dir, "receipt_gate required gate name '"+gate+"' is not a safe path component; the release gate fails closed")
+			continue
+		}
+		rel := filepath.Join(dir, cfg.Commit, gate+".json")
+		data, err := os.ReadFile(filepath.Join(repoRoot, rel))
+		if err != nil {
+			if os.IsNotExist(err) {
+				add(rel, "no '"+gate+"' receipt for commit "+cfg.Commit+"; the semantic gate has not run (fail-closed)")
+				continue
+			}
+			return nil, err
+		}
+		var r receipt
+		if err := json.Unmarshal(data, &r); err != nil {
+			add(rel, "'"+gate+"' receipt is malformed JSON: "+err.Error())
+			continue
+		}
+		if r.Subject.Digest.GitCommit != cfg.Commit {
+			add(rel, "'"+gate+"' receipt subject '"+r.Subject.Digest.GitCommit+"' does not match the target commit "+cfg.Commit)
+			continue
+		}
+		if r.VerificationResult != "PROMOTE" {
+			add(rel, "'"+gate+"' receipt verdict is '"+r.VerificationResult+"', not PROMOTE")
+			continue
+		}
+		if strings.TrimSpace(r.JudgeModel) == "" {
+			add(rel, "'"+gate+"' receipt pins no judge model; a floating judge is not auditable")
+		}
+	}
+	return out, nil
 }
 
 // tokenCheck is a compiled BannedToken ready for line matching.
