@@ -16,6 +16,28 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
+# --- iss-62 identity gate ---------------------------------------------------
+# Refuse a commit whose author identity diverges from the committed pin
+# (.abcd/config/identity.json). Self-contained (no binary dependency) so the
+# guard holds even before abcd is built or on PATH, and can't be broken by a
+# stale abcd; mirrors `abcd ahoy identity-check`. No-op when the repo has not
+# adopted the gate (no pin). Runs FIRST — the name-guard below early-exits when
+# no banlist is present, which must not skip this check.
+identity_pin=".abcd/config/identity.json"
+if [ -f "$identity_pin" ]; then
+  want_name=$(sed -n 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$identity_pin" | head -n1)
+  want_email=$(sed -n 's/.*"email"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$identity_pin" | head -n1)
+  have_name=$(git config user.name || true)
+  have_email=$(git config user.email || true)
+  if [ -n "$want_name" ] && [ -n "$want_email" ] \
+     && { [ "$have_name" != "$want_name" ] || [ "$have_email" != "$want_email" ]; }; then
+    echo "pre-commit: BLOCKED — git identity \"$have_name <$have_email>\" does not match the pinned \"$want_name <$want_email>\" ($identity_pin)." >&2
+    echo "            fix: git config user.name \"$want_name\" && git config user.email \"$want_email\"" >&2
+    exit 1
+  fi
+fi
+# --- end iss-62 identity gate -----------------------------------------------
+
 banlist=".abcd/.work.local/private-names.txt"
 
 # Refresh the generated block from the user-level sources corpus when present
