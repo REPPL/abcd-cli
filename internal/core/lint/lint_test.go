@@ -718,6 +718,52 @@ func TestGateLockstep(t *testing.T) {
 	}
 }
 
+func TestArmReceiptGate(t *testing.T) {
+	base := Config{Rules: map[string]RuleConfig{
+		"receipt_gate": {Enabled: false, Severity: "blocker", ReceiptsDir: ".abcd/work/reviews", RequiredGates: []string{"config-gate"}},
+	}}
+
+	// Arming with a commit + explicit gates overrides enable/commit/gates.
+	armed := ArmReceiptGate(base, "abc123", []string{"cli-gate-a", "cli-gate-b"})
+	rc := armed.Rules["receipt_gate"]
+	if !rc.Enabled || rc.Commit != "abc123" {
+		t.Fatalf("arming must enable + set commit, got %+v", rc)
+	}
+	if len(rc.RequiredGates) != 2 || rc.RequiredGates[0] != "cli-gate-a" {
+		t.Fatalf("supplied gates must override the config list, got %+v", rc.RequiredGates)
+	}
+
+	// The input config is not mutated (its map is copied).
+	if base.Rules["receipt_gate"].Enabled || base.Rules["receipt_gate"].Commit != "" {
+		t.Fatal("ArmReceiptGate must not mutate the input config")
+	}
+
+	// No supplied gates → the config's list is kept.
+	kept := ArmReceiptGate(base, "def456", nil)
+	if got := kept.Rules["receipt_gate"].RequiredGates; len(got) != 1 || got[0] != "config-gate" {
+		t.Fatalf("nil gates must keep the config list, got %+v", got)
+	}
+
+	// A committer-downgraded severity in the config must NOT defang the armed
+	// gate — arming forces blocker so the teeth are trust-rooted to the caller.
+	downgraded := Config{Rules: map[string]RuleConfig{
+		"receipt_gate": {Enabled: false, Severity: "warning", ReceiptsDir: ".abcd/work/reviews", RequiredGates: []string{"g"}},
+	}}
+	if sev := ArmReceiptGate(downgraded, "abc123", nil).Rules["receipt_gate"].Severity; sev != "blocker" {
+		t.Fatalf("arming must force blocker severity, got %q", sev)
+	}
+
+	// End to end: an armed config with no receipt on disk fails closed.
+	root := t.TempDir()
+	fs, err := Lint(armed, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if countRule(fs, "receipt_gate") == 0 {
+		t.Fatal("an armed gate with no receipts must fire (fail-closed)")
+	}
+}
+
 // presentTenseTokens mirrors the change-narration phrase list shipped in
 // .abcd/docs-lint.json (word-boundary, case-insensitive, inline-escape).
 func presentTenseTokens() []BannedToken {

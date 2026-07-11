@@ -57,16 +57,25 @@ judge model; a missing, mismatched, malformed, HOLD, or model-less receipt
 **blocks** the release (fail-closed — an un-run semantic pass is never a silent
 pass).
 
-> **Partially armed.** The receipt schema + the fail-closed `receipt_gate` verify
-> rule exist and are tested (phase 2), but the rule is **disabled by default** —
-> it must never fire on ordinary PRs/pushes, only at release time against the
-> tagged commit. Arming it in `release.yml` (with the tagged sha) and
-> **cosign-signing** the receipt with in-`release.yml` signature verification is
-> phase 4; the runbook↔`release.yml` lockstep lint is phase 3. Until those land,
-> the release-time verification is enforced by this runbook as maintainer
-> discipline. That provisional status is stated per
+The `receipt_gate` rule is **disabled by default** — it must never fire on
+ordinary PRs/pushes, only at release time — and is armed by `release.yml`, which
+supplies the tagged commit and the required-gate list from the workflow (the
+trust root), not the in-tree config: `record-lint --release-gate <sha>
+--require-gate <name>…`. `release.yml` then signs the receipts with
+`actions/attest` (predicate `.../semantic-release-gate/v1`) and verifies the
+attestation with `gh attestation verify` — no new dependency (the same attest
+family + `gh` the binary provenance already uses).
+
+> **Dormant until the public flip.** Artifact attestation is a public-repo
+> feature, so the whole gate is gated `if: !github.event.repository.private` —
+> exactly like the binary attestation — and does nothing on a private repo,
+> activating on the public flip. And the signature is **auditable release
+> provenance, not committer-forgery-proof**: a receipt forged and committed
+> before the tag would be signed too; that residual is bounded by the iss-62
+> identity gate + branch protection. Stated per
 > [`../principles/loud-staging.md`](../principles/loud-staging.md), not implied
-> away.
+> away. Full forgery-prevention would need host-side signing at receipt
+> production — a later step if the threat model warrants it.
 
 ## Procedure
 

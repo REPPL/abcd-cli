@@ -108,6 +108,35 @@ type RuleConfig struct {
 	MinGates int `json:"min_gates"`
 }
 
+// ArmReceiptGate returns cfg with the receipt_gate rule armed for a release: it
+// is enabled and pointed at the target commit, and — when a non-empty list is
+// supplied — its required gates are overridden. This is how a release runs the
+// gate: the CALLER (a CI workflow) supplies the arming, so the decision to gate,
+// the target commit, and the required-gates list are trust-rooted to the workflow
+// rather than the in-tree, committer-editable config (phase-2 review Finding 2).
+// The input cfg is not mutated (the Rules map is copied). Other rules are
+// unchanged; the deterministic gates still run alongside.
+func ArmReceiptGate(cfg Config, commit string, requiredGates []string) Config {
+	rules := make(map[string]RuleConfig, len(cfg.Rules)+1)
+	for k, v := range cfg.Rules {
+		rules[k] = v
+	}
+	rc := rules["receipt_gate"]
+	rc.Enabled = true
+	rc.Commit = commit
+	// An armed release gate is blocking by definition — force the severity so the
+	// gate's teeth are trust-rooted to the caller (a CI workflow) like Enabled and
+	// Commit, never the committer-editable config. A downgraded severity landed in
+	// the in-tree file must not defang the gate at release time.
+	rc.Severity = severityBlocker
+	if len(requiredGates) > 0 {
+		rc.RequiredGates = requiredGates
+	}
+	rules["receipt_gate"] = rc
+	cfg.Rules = rules
+	return cfg
+}
+
 // LoadConfig reads and decodes a record-lint config file.
 func LoadConfig(path string) (Config, error) {
 	data, err := os.ReadFile(path)
