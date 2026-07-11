@@ -5,6 +5,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/REPPL/abcd-cli/internal/core/identity"
 )
 
 func idGitRepo(t *testing.T, name, email string) string {
@@ -61,5 +63,38 @@ func TestDetectGitIdentity_Unpinned(t *testing.T) {
 	gaps := detectGitIdentity(dir)
 	if len(gaps) != 1 || gaps[0].ID != "git_identity.unpinned" || gaps[0].Required {
 		t.Fatalf("want one advisory git_identity.unpinned gap, got %+v", gaps)
+	}
+}
+
+func TestStepIdentityPin_WritesFromCurrentIdentity(t *testing.T) {
+	dir := idGitRepo(t, "Alex Reppel", "alex@example.com")
+	a := &applyCtx{
+		cwd:        dir,
+		approved:   map[GapCategory]bool{ConfigChange: true},
+		gapPresent: map[string]bool{"git_identity.unpinned": true},
+	}
+	a.stepIdentityPin()
+	got, ok, err := identity.LoadPin(dir)
+	if err != nil || !ok {
+		t.Fatalf("pin not written: ok=%v err=%v", ok, err)
+	}
+	if got.Name != "Alex Reppel" || got.Email != "alex@example.com" {
+		t.Fatalf("wrong pin written: %+v", got)
+	}
+	if len(a.writes) != 1 || a.writes[0] != identity.PinRelPath {
+		t.Fatalf("expected one noted write of the pin, got %v", a.writes)
+	}
+}
+
+func TestStepIdentityPin_NeverAutoResolvesMismatch(t *testing.T) {
+	dir := idGitRepo(t, "Test User", "test@example.com")
+	a := &applyCtx{
+		cwd:        dir,
+		approved:   map[GapCategory]bool{ConfigChange: true},
+		gapPresent: map[string]bool{"git_identity.mismatch": true},
+	}
+	a.stepIdentityPin()
+	if _, ok, _ := identity.LoadPin(dir); ok {
+		t.Fatal("a mismatch must never auto-write a pin")
 	}
 }

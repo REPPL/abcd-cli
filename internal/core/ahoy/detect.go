@@ -211,7 +211,7 @@ func detectGitIdentity(cwd string) []Gap {
 			ID: "git_identity.mismatch", Category: ConfigChange, Scope: "repo",
 			Title:      "git commit identity does not match the pin",
 			Detail:     res.Reason,
-			FixHint:    "set this repo's git user.name/user.email to the pin in " + identity.PinRelPath + " (ahoy install proposes it)",
+			FixHint:    "set this repo's git user.name/user.email to match the pin in " + identity.PinRelPath + " (or update the pin if the identity changed)",
 			Required:   true,
 			Resolvable: true,
 		}}

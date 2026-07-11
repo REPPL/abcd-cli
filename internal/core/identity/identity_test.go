@@ -121,6 +121,28 @@ func TestLoadPin_MissingFields(t *testing.T) {
 	}
 }
 
+func TestWritePin_RoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	want := Pin{Name: "Alex Reppel", Email: "alex@example.com"}
+	if err := WritePin(dir, want); err != nil {
+		t.Fatal(err)
+	}
+	got, ok, err := LoadPin(dir)
+	if err != nil || !ok {
+		t.Fatalf("LoadPin after WritePin: ok=%v err=%v", ok, err)
+	}
+	if got != want {
+		t.Fatalf("round-trip mismatch: got %+v want %+v", got, want)
+	}
+}
+
+func TestWritePin_RequiresBothFields(t *testing.T) {
+	dir := t.TempDir()
+	if err := WritePin(dir, Pin{Name: "Alex"}); err == nil {
+		t.Fatal("want error when email is missing")
+	}
+}
+
 // Blocks reports whether a pre-commit hook should refuse the commit: a mismatch
 // or an unset identity blocks; OK and NoPin (opted-out) do not.
 func TestBlocks(t *testing.T) {

@@ -104,6 +104,26 @@ func LoadPin(root string) (Pin, bool, error) {
 	return p, true, nil
 }
 
+// WritePin writes the pin to .abcd/config/identity.json (creating the config
+// directory), pretty-printed with a trailing newline. It is how a repo adopts
+// the identity gate. Both fields are required.
+func WritePin(root string, p Pin) error {
+	p.Name = strings.TrimSpace(p.Name)
+	p.Email = strings.TrimSpace(p.Email)
+	if p.Name == "" || p.Email == "" {
+		return fmt.Errorf("identity pin requires both name and email")
+	}
+	path := filepath.Join(root, PinRelPath)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(p, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, append(data, '\n'), 0o644)
+}
+
 // EffectiveIdentity returns the author identity git would use for a commit in
 // root, via `git config` (which honours the local > global > system layering).
 // Unset name or email yields an empty field, not an error.
