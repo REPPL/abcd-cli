@@ -86,6 +86,20 @@ func TestStepIdentityPin_WritesFromCurrentIdentity(t *testing.T) {
 	}
 }
 
+func TestStepIdentityPin_SkipsUnderYes(t *testing.T) {
+	dir := idGitRepo(t, "Test User", "test@example.com")
+	a := &applyCtx{
+		cwd:        dir,
+		approved:   map[GapCategory]bool{ConfigChange: true},
+		gapPresent: map[string]bool{"git_identity.unpinned": true},
+		autoYes:    true,
+	}
+	a.stepIdentityPin()
+	if _, ok, _ := identity.LoadPin(dir); ok {
+		t.Fatal("--yes must not silently pin the current (possibly sandbox) identity")
+	}
+}
+
 func TestStepIdentityPin_NeverAutoResolvesMismatch(t *testing.T) {
 	dir := idGitRepo(t, "Test User", "test@example.com")
 	a := &applyCtx{

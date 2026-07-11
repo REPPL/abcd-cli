@@ -1,6 +1,7 @@
 package ahoy
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
@@ -196,12 +197,16 @@ func detectIdentity(id RepoIdentity, idx *historyIndex) []Gap {
 func detectGitIdentity(cwd string) []Gap {
 	res, err := identity.Check(cwd)
 	if err != nil {
+		// A present-but-unreadable pin is an adopted-but-broken gate (required);
+		// an error with no pin is a git/environment issue (advisory).
+		_, statErr := os.Stat(filepath.Join(cwd, identity.PinRelPath))
+		pinPresent := statErr == nil
 		return []Gap{{
 			ID: "git_identity.uncheckable", Category: ConfigChange, Scope: "repo",
 			Title:      "git identity could not be checked",
 			Detail:     err.Error(),
-			FixHint:    "ensure git is installed and this is a git repository",
-			Required:   false,
+			FixHint:    "fix the pin JSON in " + identity.PinRelPath + " (both name and email), or ensure git is available",
+			Required:   pinPresent,
 			Resolvable: false,
 		}}
 	}
