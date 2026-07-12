@@ -29,12 +29,15 @@ type Field struct {
 // (or is empty) yields no fields.
 func Fields(lines []string) map[string]Field {
 	fields := map[string]Field{}
-	if len(lines) == 0 || strings.TrimRight(lines[0], "\r") != "---" {
+	// A delimiter line may carry trailing whitespace ("--- "); trim spaces/tabs/CR
+	// before comparing, so a trailing-space closing delimiter is still seen as the
+	// close and body lines after it do not leak in as fields.
+	if len(lines) == 0 || strings.TrimRight(lines[0], " \t\r") != "---" {
 		return fields
 	}
 	for i := 1; i < len(lines); i++ {
 		line := strings.TrimRight(lines[i], "\r")
-		if line == "---" {
+		if strings.TrimRight(line, " \t") == "---" {
 			break
 		}
 		m := keyRe.FindStringSubmatch(line)
