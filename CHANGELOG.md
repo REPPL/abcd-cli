@@ -152,6 +152,12 @@ called out in a **Breaking** section.
   misclassifies a valid UTF-8 file as binary when a multibyte rune straddles the
   8 KB boundary (which would have skipped scanning it), and a bundle file that
   cannot be read is now surfaced in `unscanned` rather than silently dropped.
+- **Issue-ledger transition hardening** (iss-71). `abcd capture resolve`/`wontfix`
+  now run their find→move under the same ledger lock id allocation uses, so two
+  concurrent conflicting transitions on one issue can no longer land it in two
+  status directories at once. A migrator-supplied `ForceID` is validated against
+  the `iss-N` shape before any path is built, so a traversal id cannot touch the
+  filesystem outside the ledger.
 - **Rules-loader trust hardening** (iss-66). The per-repo `.abcd/rules.json` is now
   opened once with `O_NOFOLLOW` and validated on that file descriptor, closing a
   Lstat-then-read window where the file could be swapped for a symlink. The
