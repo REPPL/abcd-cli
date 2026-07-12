@@ -18,8 +18,9 @@ const placeholderRetryBudget = 8
 // sweep removes it.
 const orphanAgeThreshold = 60 * time.Second
 
-// lockTimeout is the default flock acquisition budget.
-const lockTimeout = 5 * time.Second
+// lockTimeout is the default flock acquisition budget. A var (not const) so a
+// test can shorten it to exercise contention without a multi-second wait.
+var lockTimeout = 5 * time.Second
 
 var rePlaceholderName = regexp.MustCompile(`^iss-[0-9]+(-[a-z0-9]+(-[a-z0-9]+)*)?\.md$`)
 var reMaxIssN = regexp.MustCompile(`^iss-([0-9]+)(?:-[a-z0-9-]+)?\.md$`)
@@ -92,6 +93,12 @@ func withLedgerLock(issuesRoot string, fn func() error) error {
 // open/, mirroring reserve_issue_path: flock -> scan max N -> O_EXCL create
 // with bump-retry. When forceID is non-empty it demands that exact id.
 func reservePath(issuesRoot, slug, forceID string) (string, string, error) {
+	// Validate a caller-supplied ForceID against the iss-N shape BEFORE it is used
+	// to build a path or create a placeholder — a traversal id (../../evil) must
+	// never touch the filesystem outside the ledger, even transiently.
+	if forceID != "" && !reIssID.MatchString(forceID) {
+		return "", "", fmt.Errorf("%w: ForceID %q must match ^iss-[0-9]+$", ErrPathUnsafe, forceID)
+	}
 	var resID, resTarget string
 	err := withLedgerLock(issuesRoot, func() error {
 		if forceID != "" {
