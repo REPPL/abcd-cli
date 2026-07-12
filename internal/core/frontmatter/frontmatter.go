@@ -1,9 +1,9 @@
 // Package frontmatter is abcd's shared markdown-frontmatter line scanner. It is
 // deliberately a line scanner, not a YAML parser: it reads only the top-level
 // keys of the leading `---`…`---` block, first key wins, and pulls in zero
-// dependencies. It exists so the native record stores (internal/core/spec,
-// internal/core/intent) share ONE copy of this primitive rather than each
-// keeping a private replica.
+// dependencies. It exists so its consumers (internal/core/spec,
+// internal/core/intent, and record-lint's top-level frontmatter checks) share ONE
+// copy of this primitive rather than each keeping a private replica.
 //
 // It is transport-agnostic: no stdout, no os.Exit, no filesystem access — the
 // caller supplies the file's lines and decides what the fields mean.
